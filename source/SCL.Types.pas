@@ -232,22 +232,22 @@ type
 
     //-------- conversion methods -----------------------------------
 
-          function ToInt(aDefault: Integer = 0): Integer                        ; overload ; inline ;
-    class function ToInt(const aValue: string; aDefault: Integer = 0 ): Integer ; overload ; inline ; static ;
-          function ToHexInt(aDefault: Integer = 0): Integer                      ; overload ; inline ;
-    class function ToHexInt(const aValue: string; aDefault:Integer = 0): Integer; overload ; inline ; static ;
+          function ToInt(aDefault: Integer = 0): Integer                          ; overload ; inline ;
+    class function ToInt(const aValue: string; aDefault: Integer = 0 ): Integer   ; overload ; inline ; static ;
+          function ToHexInt(aDefault: Integer = 0): Integer                       ; overload ; inline ;
+    class function ToHexInt(const aValue: string; aDefault:Integer = 0): Integer  ; overload ; inline ; static ;
           function ToRomanInt(aDefault:Integer = 0): Integer                      ; overload ; inline ;
     class function ToRomanInt(const aValue: string; aDefault:Integer = 0): Integer; overload ; static ;
-          function ToInt64(aDefault: Int64 = 0): Int64                       ; overload ; inline ;
-    class function ToInt64(const aValue: string; aDefault: Int64 = 0): Int64 ; overload ; inline ; static ;
-          function ToFloat(aDefault: Double = 0): Double                       ; overload ; inline ;
-    class function ToFloat(const aValue: string; aDefault: Double = 0): Double ; overload ; inline ; static ;
+          function ToInt64(aDefault: Int64 = 0): Int64                            ; overload ; inline ;
+    class function ToInt64(const aValue: string; aDefault: Int64 = 0): Int64      ; overload ; inline ; static ;
+          function ToFloat(aDefault: Double = 0): Double                          ; overload ; inline ;
+    class function ToFloat(const aValue: string; aDefault: Double = 0): Double    ; overload ; inline ; static ;
           function ToCurrency(aDefault: Currency = 0): Currency                       ; overload ; inline ;
     class function ToCurrency(const aValue: string; aDefault: Currency = 0): Currency ; overload ; inline ; static ;
-          function ToDate(aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aDateFormat: string=''):TDateTime; overload ; inline ;
-    class function ToDate(const aValue: string; aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aDateFormat: string=''):TDateTime  ; overload ; static ;
-          function ToTime(aDefault: TDateTime = 0.0; aTimeSeparator: Char = #0):TDateTime                      ; overload ; inline ;
-    class function ToTime(const aValue: string; aDefault: TDateTime = 0.0; aTimeSeparator: Char = #0):TDateTime; overload ; static ;
+          function ToDate(aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aDateFormat: string=''):TDate; overload ; inline ;
+    class function ToDate(const aValue: string; aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aDateFormat: string=''):TDate ; overload ; static ;
+          function ToTime(aDefault: TDateTime = 0.0; aTimeSeparator: Char = #0):TTime                      ; overload ; inline ;
+    class function ToTime(const aValue: string; aDefault: TDateTime = 0.0; aTimeSeparator: Char = #0):TTime; overload ; static ;
           function ToDateTime(aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aTimeSeparator: Char = #0):TDateTime                      ; overload ; inline ;
     class function ToDateTime(const aValue: string; aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aTimeSeparator: Char = #0):TDateTime; overload ; static ;
 
@@ -348,6 +348,12 @@ type
           function IsWordPresent(const aWord: string; aWordSeparators: TSysCharSet = []): Boolean         ; overload ; inline ;
     class function IsWordPresent(const aValue, aWord: string; aWordSeparators: TSysCharSet = []): Boolean ; overload ; static ;
 
+          function IsInteger: Boolean   ; inline;
+          function IsFloat  : Boolean   ; inline;
+          function IsInt64  : Boolean   ; inline;
+          function IsDate(aDateSeparator: Char = #0; const aDateFormat: string = ''): Boolean; inline;
+          function IsTime(aTimeSeparator: Char = #0): Boolean                                ; inline;
+
     //-------- string manipulation methods ----------------------------
 
           function ToUpper: string                       ; overload ; inline ;
@@ -402,6 +408,9 @@ type
           function Concat(const aSeparator, aConcatValue: string): string; inline;
           function ConcatIfNotEmpty(const aSeparator, aConcatValue: string): string; inline;
           function ConcatIfNotNull(const aSeparator, aConcatValue: string): string; inline;
+
+          function Split(aSeparator: Char; aQuote: Char ='"'): TStringDynArray; overload ; inline;
+    class function Split(const aValue: string; aSeparator: Char; aQuote: Char ='"'): TStringDynArray; overload ; static ; inline;
 
           function Extract( AStart: Integer; aCount: Integer = -1 ): string                     ; overload ; inline ;
     class function Extract( var aValue: string; AStart: Integer; aCount: Integer = -1 ): string ; overload ; static ;
@@ -564,6 +573,8 @@ type
 
           function IsNull: Boolean                  ; overload ; inline ;
     class function IsNull( aValue: TTime ): Boolean ; overload ; inline ; static ;
+          function IsNotNull: Boolean                  ; overload ; inline ;
+    class function IsNotNull( aValue: TTime ): Boolean ; overload ; inline ; static ;
           function Equals( aValue: TTime ): Boolean          ; overload ; inline ;
     class function Equals( aValue1, aValue2: TTime ): Boolean; overload ; inline ; static ;
           function IsPM: Boolean; inline ;
@@ -1317,7 +1328,7 @@ begin
   Result := StrToCurrDef(aValue.Trim, aDefault);
 end;
 
-class function TStringHelper.ToDate(const aValue: string; aDefault: TDateTime; aDateSeparator: Char; aDateFormat: string): TDateTime;
+class function TStringHelper.ToDate(const aValue: string; aDefault: TDateTime; aDateSeparator: Char; aDateFormat: string): TDate;
 var
   fmt: TFormatSettings;
 begin
@@ -1329,12 +1340,12 @@ begin
   Result := StrToDateDef(aValue,aDefault,fmt);
 end;
 
-function TStringHelper.ToDate(aDefault: TDateTime; aDateSeparator: Char; aDateFormat: string): TDateTime;
+function TStringHelper.ToDate(aDefault: TDateTime; aDateSeparator: Char; aDateFormat: string): TDate;
 begin
   Result := ToDate(Self,aDefault,aDateSeparator,aDateFormat);
 end;
 
-class function TStringHelper.ToTime(const aValue: string; aDefault: TDateTime; aTimeSeparator: Char): TDateTime;
+class function TStringHelper.ToTime(const aValue: string; aDefault: TDateTime; aTimeSeparator: Char): TTime;
 var
   fmt: TFormatSettings;
 begin
@@ -1344,7 +1355,7 @@ begin
   Result := StrToTimeDef(aValue,aDefault,fmt);
 end;
 
-function TStringHelper.ToTime(aDefault: TDateTime; aTimeSeparator: Char): TDateTime;
+function TStringHelper.ToTime(aDefault: TDateTime; aTimeSeparator: Char): TTime;
 begin
   Result := ToTime(Self,aDefault,aTimeSeparator);
 end;
@@ -1711,6 +1722,43 @@ begin
   Result := False;
 end;
 
+function TStringHelper.IsInt64: Boolean;
+var
+  i: Int64;
+begin
+  Result := TryStrToInt64(Self, i);
+end;
+
+function TStringHelper.IsInteger: Boolean;
+var
+  i: Integer;
+begin
+  Result := TryStrToInt(Self, i);
+end;
+
+function TStringHelper.IsFloat: Boolean;
+var
+  i: Double;
+begin
+  Result := TryStrToFloat(Self, i);
+end;
+
+function TStringHelper.IsDate(aDateSeparator: Char; const aDateFormat: string): Boolean;
+begin
+  if Self.IsEmpty then
+    Result := False
+  else
+    Result := ToDate(TDate.NullDate, aDateSeparator, aDateFormat).IsNotNull;
+end;
+
+function TStringHelper.IsTime(aTimeSeparator: Char): Boolean;
+begin
+  if Self.IsEmpty then
+    Result := False
+  else
+    Result := ToTime(TTime.NullTime, aTimeSeparator).IsNotNull;
+end;
+
 class function TStringHelper.PosRight(const aSubStr, aValue: string; aStartChar: Integer): Integer;
 var
   idx, lPos, lenSubStr, offs: Integer ;
@@ -1859,6 +1907,16 @@ end;
 class function TStringHelper.SameAs(const AValue1, AValue2: string): Boolean;
 begin
   Result := AnsiCompareText( AValue1, AValue2 ) = 0 ;
+end;
+
+class function TStringHelper.Split(const aValue: string; aSeparator, aQuote: Char): TStringDynArray;
+begin
+  Result := TTokenString.Create(aValue, aSeparator, aQuote).ToArray;
+end;
+
+function TStringHelper.Split(aSeparator, aQuote: Char): TStringDynArray;
+begin
+  Result := TTokenString.Create(Self, aSeparator, aQuote).ToArray;
 end;
 
 function TStringHelper.SameAs(const aValue: string): Boolean;
@@ -2586,6 +2644,16 @@ end;
 {$ENDREGION}
 
 {$REGION 'TTimeHelper'}
+
+class function TTimeHelper.IsNotNull(aValue: TTime): Boolean;
+begin
+  Result := aValue <> NullTime;
+end;
+
+function TTimeHelper.IsNotNull: Boolean;
+begin
+  Result := Self <> NullTime;
+end;
 
 class function TTimeHelper.IsNull(aValue: TTime): Boolean;
 begin
