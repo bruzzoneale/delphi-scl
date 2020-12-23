@@ -468,8 +468,8 @@ type
       function GetDay: Word; inline ;
       function GetMonth: Word; inline ;
       function GetYear: Word; inline ;
-      function GetDayOfWeek: Word; inline;
-      function GetDayOfYear: Word; inline;
+      function GetDayOfWeek: Integer; inline;
+      function GetDayOfYear: Integer; inline;
       function GetWeek: Word; inline ;
   {$ENDREGION}
   public
@@ -502,6 +502,7 @@ type
 
     function IsInLeapYear: Boolean            ; inline ;
 
+    function IsInRange(aFromDate, aEndDate: TDate): Boolean; inline;
     function Equals( aValue: TDate ): Boolean ; inline ;
 
     function IfNull(aDefault: TDate): TDate   ; inline ;
@@ -517,17 +518,27 @@ type
 
     property Week : Word read GetWeek;
 
-    property DayOfWeek: Word read GetDayOfWeek;
+    property DayOfWeek: Integer read GetDayOfWeek;
 
-    property DayOfYear: Word read GetDayOfYear;
+    property DayOfYear: Integer read GetDayOfYear;
 
 
           function DaysInMonth: Integer                        ; overload ;
     class function DaysInMonth( aYear, aMonth: Word ): Integer ; overload ; static ; inline ;
 
-    function FirstDayOfMonth: TDate                      ; inline ;
+    function FirstDayOfMonth: TDate               ; inline ;
 
-    function LastDayOfMonth: TDate                       ; inline ;
+    function LastDayOfMonth: TDate                ; inline ;
+
+    function DaysBetween(aValue: TDate)  : Integer; inline;
+
+    function MonthsBetween(aValue: TDate): Integer; inline;
+
+    function YearsBetween(aValue: TDate) : Integer; inline;
+
+
+
+
 
 
 
@@ -539,6 +550,9 @@ type
     function IncYear( aYears: Integer = 1 ): TDate                    ; inline ;
 
     class function Today: TDate ; inline ; static ;
+    class function Tomorrow : TDate ; inline ; static ;
+    class function Yesterday: TDate ; inline ; static ;
+
     class function Max(const aDateA, aDateB: TDate): TDate; inline ; static ;
   end;
 
@@ -551,6 +565,10 @@ type
     function GetMilliSecond: Word; inline;
     function GetMinute: Word; inline;
     function GetSecond: Word; inline;
+    function GetSecondOfDay: Integer; inline;
+    function GetMilliSecondOfDay: Integer; inline;
+    function GetMinuteOfDay: Integer; inline;
+
   {$ENDREGION}
   public
     const NullTime: TTime = 0.0;
@@ -596,7 +614,17 @@ type
     
     property MilliSecond : Word read GetMilliSecond;
 
-    
+
+    property MinuteOfDay: Integer read GetMinuteOfDay;
+
+    property SecondOfDay: Integer read GetSecondOfDay;
+
+    property MilliSecondOfDay: Integer read GetMilliSecondOfDay;
+
+    function HoursBetween(aValue: TTime)       : Integer; inline;
+    function MinutesBetween(aValue: TTime)     : Integer; inline;
+    function SecondsBetween(aValue: TTime)     : Integer; inline;
+    function MillisecondsBetween(aValue: TTime): Integer; inline;
 
     
     function IncHour( AHours: Integer=1 ): TTime                    ; inline ;
@@ -680,6 +708,7 @@ type
     procedure Add(aValues: TStringDynArray; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ;
     procedure Add(aValues: TStrings       ; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ; inline ;
     procedure Delete(aIndex: Integer);
+    function ToString(const aLineSep: string = LF): string;
   end;
 
 
@@ -2083,6 +2112,16 @@ begin
   Result := System.SysUtils.Date;
 end;
 
+class function TDateHelper.Tomorrow: TDate;
+begin
+  Result := System.SysUtils.Date + 1;
+end;
+
+class function TDateHelper.Yesterday: TDate;
+begin
+  Result := System.SysUtils.Date - 1;
+end;
+
 function TDateHelper.IsNull: Boolean;
 begin
   Result := (Self = NullDate);
@@ -2096,6 +2135,11 @@ end;
 function TDateHelper.IsInLeapYear: Boolean;
 begin
   Result := IsLeapYear(YearOf(Self));
+end;
+
+function TDateHelper.IsInRange(aFromDate, aEndDate: TDate): Boolean;
+begin
+  Result := DateInRange(Self, aFromDate, aEndDate, True);
 end;
 
 function TDateHelper.LastDayOfMonth: TDate;
@@ -2112,6 +2156,21 @@ var
 begin
   DecodeDate(Self, y, m, d);
   Result := EncodeDate(y, m, 1) ;
+end;
+
+function TDateHelper.DaysBetween(aValue: TDate): Integer;
+begin
+  Result := System.DateUtils.DaysBetween(Self, aValue);
+end;
+
+function TDateHelper.MonthsBetween(aValue: TDate): Integer;
+begin
+  Result := System.DateUtils.MonthsBetween(Self, aValue);
+end;
+
+function TDateHelper.YearsBetween(aValue: TDate): Integer;
+begin
+  Result := System.DateUtils.YearsBetween(Self, aValue);
 end;
 
 class function TDateHelper.DaysInMonth(aYear, aMonth: Word): Integer;
@@ -2167,7 +2226,7 @@ begin
     Result := DayOf(Self);
 end;
 
-function TDateHelper.GetDayOfWeek: Word;
+function TDateHelper.GetDayOfWeek: Integer;
 begin
   if IsNull then
     Result := 0
@@ -2175,7 +2234,7 @@ begin
     Result := DayOfTheWeek(Self) ;
 end;
 
-function TDateHelper.GetDayOfYear: Word;
+function TDateHelper.GetDayOfYear: Integer;
 begin
   if IsNull then
     Result := 0
@@ -2374,14 +2433,29 @@ begin
   Result := MilliSecondOf(Self);
 end;
 
+function TTimeHelper.GetMilliSecondOfDay: Integer;
+begin
+  Result := MilliSecondOfTheDay(Self)
+end;
+
 function TTimeHelper.GetMinute: Word;
 begin
   Result := MinuteOf(Self);
 end;
 
+function TTimeHelper.GetMinuteOfDay: Integer;
+begin
+  Result := MinuteOfTheDay(Self);
+end;
+
 function TTimeHelper.GetSecond: Word;
 begin
   Result := SecondOf(Self);
+end;
+
+function TTimeHelper.GetSecondOfDay: Integer;
+begin
+  Result := SecondOfTheDay(Self);
 end;
 
 function TTimeHelper.IncHour(aHours: Integer): TTime;
@@ -2421,6 +2495,26 @@ end;
 class function TTimeHelper.Now: TTime;
 begin
   Result := System.SysUtils.Time;
+end;
+
+function TTimeHelper.HoursBetween(aValue: TTime): Integer;
+begin
+  Result := System.DateUtils.HoursBetween(Self,aValue);
+end;
+
+function TTimeHelper.MinutesBetween(aValue: TTime): Integer;
+begin
+  Result := System.DateUtils.MinutesBetween(Self,aValue);
+end;
+
+function TTimeHelper.SecondsBetween(aValue: TTime): Integer;
+begin
+  Result := System.DateUtils.SecondsBetween(Self,aValue);
+end;
+
+function TTimeHelper.MillisecondsBetween(aValue: TTime): Integer;
+begin
+  Result := System.DateUtils.MilliSecondsBetween(Self,aValue);
 end;
 
 function TTimeHelper.ToInt(aFormat: TTimeConvFormat): Integer;
@@ -2601,6 +2695,15 @@ end;
 procedure TStringDynArrayHelper.Resize(aCount: Integer);
 begin
   SetLength(Self,aCount);
+end;
+
+function TStringDynArrayHelper.ToString(const aLineSep: string): string;
+var
+  s: string;
+begin
+  Result := '';
+  for s in self do
+    Result := Result.Concat(aLineSep, s);
 end;
 
 procedure TStringDynArrayHelper.Add(const aValue: string);
