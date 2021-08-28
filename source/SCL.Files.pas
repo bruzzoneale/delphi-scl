@@ -21,7 +21,8 @@ uses
   System.DateUtils,
   System.IOUtils,
   System.Masks,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  System.Hash;
 
 type
 {$REGION 'Aliases'}
@@ -40,10 +41,21 @@ type
     class function ChangeExtension(const aFileName, aNewExtension: string): string; static;
     class function ExpandRelativePath(const aPath: string ): string; static ;
     class function DecodePathFromURL(const aUrlPath: string): string; static;
+    class function PurePlatformPath(const aPath: string): string; static;
   end;
 
 
   TFileHelper = record helper for TFile
+  public
+  const
+    Bytes1KB  = 1024;
+    Bytes1MB  = 1024 * Bytes1KB;
+    Bytes1GB  = 1024 * Bytes1MB;
+    Bytes64KB = 64 * Bytes1KB;
+    Bytes64MB = 64 * Bytes1MB;
+    Bytes2GB  = 2 * LongWord(Bytes1GB);
+  type
+    TStringByteSize = ( bsAuto, bsByte, bsKB, bsMB, bsGB ) ;
   public
     /// <summary>
     /// Creates a new temporary unique file and returns its name or NullString if errors occurs
@@ -57,21 +69,45 @@ type
     /// </summary>
     class procedure DeleteCreatedTempFiles ; static ;
     /// <summary>
+    /// Deletes a file without raising any exception if it not exists
+    /// </summary>
+    class procedure Delete(const aFileName: string); static;
+    /// <summary>
+    ///  Deletes any files that match the search file mask
+    /// </summary>
+    class procedure DeleteAll(const aFileNameOrMask: string); static;
+    /// <summary>
     ///  Move a file into the recycle bin (only windows)
     /// </summary>
     class procedure Recycle(const aFileName: string; aDeleteReadOnly: Boolean = False); overload ; static ;
+    /// <summary>
+    ///  Rename a file even if it has readonly attribute (Windows Only) and overwrite destination file if exists
+    /// </summary>
     class procedure Rename(const aFileName, aNewFileName: string; aRenameReadOnly: Boolean = False ) ; static ;
-
-    /// <summary> Reads entire content of a file into a string </summary>
+    /// <summary>
+    ///  Reads entire content of a file into a string
+    /// </summary>
     class function toString(const aFileName: string; aEncoding: TEncoding = nil): string ; static ;
     /// <summary>
-    /// Returns total dymension of multiple files or returns -1 if no files found
+    /// Returns total size in bytes of multiple files or returns -1 if no files found
     /// </summary>
     class function GetSize(const aFileNameOrMask: string): Int64; static;
+    /// <summary>
+    ///  Returns total size in human readable string format of one or multiple files
+    /// </summary>
+    class function GetSizeAsString(const aFileNameOrMask: string; aConversionType: TStringByteSize = bsAuto): string; overload; static;
+    /// <summary>
+    ///  Returns a number formatted in human readable form as bytes value
+    /// </summary>
+    class function GetSizeAsString(aFileSize: Int64; aConversionType: TStringByteSize = bsAuto): string; overload; static;
     /// <summary>
     /// Remove the BOM from a Unicode file (if exists)
     /// </summary>
     class procedure RemoveBOMFromFile(const aFileName: string; aEncoding: TEncoding = nil); static ;
+    /// <summary>
+    /// Returns MD5 Hash of file
+    /// </summary>
+    class function GetMD5(const aFileName: string): string; static; inline;
   end;
 
   TFileSignature = record
@@ -182,6 +218,14 @@ begin
     Result := Result.EnsureSuffix(TPath.DirectorySeparatorChar);
 end;
 
+class function TPathHelper.PurePlatformPath(const aPath: string): string;
+begin
+  if TPath.DirectorySeparatorChar = '\' then
+    Result := aPath.Replace('/', '\')
+  else
+    Result := aPath.Replace('\', TPath.DirectorySeparatorChar);
+end;
+
 {$ENDREGION}
 
 {$REGION 'TFileHelper'}
@@ -218,6 +262,31 @@ begin
   end;
 end;
 
+class procedure TFileHelper.Delete(const aFileName: string);
+begin
+  if FileExists(aFilename) then
+    if not DeleteFile(aFileName)then
+      raise EInOutError.Create(SysErrorMessage(GetLastError));
+end;
+
+class procedure TFileHelper.DeleteAll(const aFileNameOrMask: string);
+var
+  SearchRec: TSearchRec;
+  fullname, path: string;
+begin
+  fullname := ExpandFileName(aFileNameOrMask);
+  path := ExtractFilePath(fullname);
+
+  if FindFirst(fullname, faAnyFile, SearchRec) = 0 then
+  begin
+    repeat
+      if (SearchRec.Attr and faDirectory) <> faDirectory then
+        DeleteFile(TPath.Combine(path, SearchRec.Name));
+    until FindNext(SearchRec) <> 0;
+    FindClose(SearchRec);
+  end;
+end;
+
 class procedure TFileHelper.DeleteCreatedTempFiles;
 var
   fileName: string;
@@ -229,11 +298,35 @@ begin
   FCreatedTempFiles.Clear;
 end;
 
-class function TFileHelper.GetSize(const AFileNameOrMask: string): Int64;
+class function TFileHelper.GetMD5(const aFileName: string): string;
+begin
+  Result := THashMD5.GetHashStringFromFile(aFileName);
+end;
+
+{$IFDEF MSWINDOWS}
+function GetFileSizeWin(const FileName: string): Int64;
+var
+  fad: TWin32FileAttributeData;
+begin
+  if not GetFileAttributesEx(PChar(FileName), GetFileExInfoStandard, @fad) then
+    Exit(-1);
+  Int64Rec(Result).Lo := fad.nFileSizeLow;
+  Int64Rec(Result).Hi := fad.nFileSizeHigh;
+end;
+{$ENDIF}
+
+class function TFileHelper.GetSize(const aFileNameOrMask: string): Int64;
 var
   SearchRec: TSearchRec;
 begin
-  if FindFirst(ExpandFileName(AFileNameOrMask), faAnyFile, SearchRec) = 0 then
+{$IFDEF MSWINDOWS}
+  if (System.Pos('*', aFileNameOrMask) = 0) and (System.Pos('?', aFileNameOrMask) = 0)  then
+  begin
+    Result := GetFileSizeWin(aFilenameOrMask);
+  end
+  else
+{$ENDIF}
+  if FindFirst(ExpandFileName(aFileNameOrMask), faAnyFile, SearchRec) = 0 then
   begin
     Result := 0;
     repeat
@@ -244,6 +337,31 @@ begin
   else
     Result := -1;
 end;
+
+class function TFileHelper.GetSizeAsString(aFileSize: Int64; aConversionType: TStringByteSize): string;
+const
+  KBYTE  = Sizeof(Byte) shl 10;
+  MBYTE  = KBYTE        shl 10;
+  GBYTE  = MBYTE        shl 10;
+begin
+  if (aConversionType = bsGB) or ( (aConversionType = bsAuto) and (aFileSize > GBYTE) ) then
+    Result := FloatToStrF(aFileSize / GBYTE,ffNumber,6,2)+' GB'
+  else
+  if (aConversionType = bsMB) or ( (aConversionType = bsAuto) and (aFileSize > MBYTE) ) then
+    Result := FloatToStrF(aFileSize / MBYTE,ffNumber,6,2)+' MB'
+  else
+  if (aConversionType = bsKB) or ( (aConversionType = bsAuto) and (aFileSize > KBYTE) ) then
+    Result := FloatToStrF(aFileSize / KBYTE,ffNumber,6,0)+' KB'
+  else
+    Result := FloatToStrF(aFileSize,ffNumber,6,0) +' Byte';
+end;
+
+class function TFileHelper.GetSizeAsString(const aFileNameOrMask: string; aConversionType: TStringByteSize): string;
+begin
+  Result := GetSizeAsString( GetSize(aFileNameOrMask), aConversionType );
+end;
+
+
 {$WARNINGS OFF}
 
 class procedure TFileHelper.Recycle(const AFileName: string; ADeleteReadOnly: Boolean);

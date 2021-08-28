@@ -15,6 +15,7 @@ uses
   System.Math,
   System.DateUtils,
   System.Masks,
+  System.Hash,
   System.NetEncoding,
   System.Generics.Collections;
 
@@ -23,6 +24,8 @@ const
   CRLF = #13#10;
   CR   = #13;
   LF   = #10;
+  QUOTE_SINGLE = #39;
+  QUOTE_DOUBLE = #34;
 
 type
   ECommonTypesException = class(Exception)
@@ -255,9 +258,9 @@ type
 
     function ToInt64(aDefault: Int64 = 0): Int64                          ; inline ;
 
-    function ToFloat(aDefault: Double = 0): Double                        ; inline ;
+    function ToFloat(aDefault: Double = 0; aDecimalSeparator: Char = #0): Double                       ; inline ;
 
-    function ToCurrency(aDefault: Currency = 0): Currency                 ; inline ;
+    function ToCurrency(aDefault: Currency = 0; aDecimalSeparator: Char = #0): Currency                ; inline ;
 
     function ToDate(aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aDateFormat: string=''):TDate; inline ;
 
@@ -286,6 +289,8 @@ type
 
     procedure ToFile(const aFileName: string; aEncoding: TEncoding = nil; aOptionBOM: TOptionBOM = obWithoutBOM);
 
+    function ToMD5: string; inline;
+    
     //-------- query methods  --------------------------------
 
 
@@ -459,6 +464,9 @@ type
     function ToArray: TStringDynArray;
     function Sep(aSepChar: Char): TTokenString;
     function Quote(aQuoteChar: Char): TTokenString;
+
+    property SepChar  : Char read FSepChar   write FSepChar ;
+    property QuoteChar: Char read FQuoteChar write FQuoteChar;
   end;
 
 
@@ -509,6 +517,10 @@ type
 
     procedure IfNotEmpty(aProc: TProc<TDate>) ; inline ;
 
+
+    function IsToday: Boolean; inline;
+
+    function IsNotToday: Boolean; inline;
 
     property Day  : Word read GetDay;
 
@@ -708,6 +720,7 @@ type
     procedure Add(aValues: TStringDynArray; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ;
     procedure Add(aValues: TStrings       ; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ; inline ;
     procedure Delete(aIndex: Integer);
+    function Get(aIndex: Integer; const aDefault: string = ''): string;
     function ToString(const aLineSep: string = LF): string;
   end;
 
@@ -1239,9 +1252,14 @@ begin
   Result := StrToIntDef(System.SysUtils.Trim(Self), aDefault);
 end;
 
-function TStringHelper.ToCurrency(aDefault: Currency): Currency;
+function TStringHelper.ToCurrency(aDefault: Currency; aDecimalSeparator: Char): Currency;
+var
+  fmt: TFormatSettings;
 begin
-  Result := StrToCurrDef(System.SysUtils.Trim(Self), aDefault);
+  fmt := TFormatSettings.Create;
+  if aDecimalSeparator <> #0 then
+    fmt.DecimalSeparator := aDecimalSeparator;
+  Result := StrToCurrDef(System.SysUtils.Trim(Self), aDefault, fmt);
 end;
 
 function TStringHelper.ToDate(aDefault: TDateTime; aDateSeparator: Char; aDateFormat: string): TDate;
@@ -1281,13 +1299,13 @@ end;
 
 function TStringHelper.ToDateTimeISO(aDefault: TDateTime): TDateTime;
 begin
-  if not TryISO8601ToDate(Self, Result, True) then
+  if not TryISO8601ToDate(Self, Result, False) then
     Result := aDefault;
 end;
 
 function TStringHelper.ToDateTimeUTC(aDefault: TDateTime): TDateTime;
 begin
-  if not TryISO8601ToDate(Self, Result, False) then
+  if not TryISO8601ToDate(Self, Result, True) then
     Result := aDefault;
 end;
 
@@ -1299,6 +1317,11 @@ end;
 function TStringHelper.ToLower: string;
 begin
   Result := AnsiLowerCase(Self);
+end;
+
+function TStringHelper.ToMD5: string;
+begin
+  Result := THashMD5.GetHashString(Self);
 end;
 
 function TStringHelper.ToRomanInt(aDefault: Integer): Integer;
@@ -1345,9 +1368,14 @@ begin
   end;
 end;
 
-function TStringHelper.ToFloat(aDefault: Double): Double;
+function TStringHelper.ToFloat(aDefault: Double; aDecimalSeparator: Char): Double;
+var
+  fmt: TFormatSettings;
 begin
-  Result := StrToFloatDef(System.SysUtils.Trim(Self), aDefault) ;
+  fmt := TFormatSettings.Create;
+  if aDecimalSeparator <> #0 then
+    fmt.DecimalSeparator := aDecimalSeparator;
+  Result := StrToFloatDef(System.SysUtils.Trim(Self), aDefault, fmt) ;
 end;
 
 function TStringHelper.ToHexInt(aDefault: Integer): Integer;
@@ -1590,7 +1618,7 @@ end;
 
 function TStringHelper.QuotedString: string;
 begin
-  Result := AnsiQuotedStr(Self,'''');
+  Result := AnsiQuotedStr(Self, QUOTE_SINGLE);
 end;
 
 function TStringHelper.DeQuotedString(const aQuoteChar: Char): string;
@@ -1600,7 +1628,7 @@ end;
 
 function TStringHelper.DeQuotedString: string;
 begin
-  Result := AnsiDequotedStr(Self,'''');
+  Result := AnsiDequotedStr(Self, QUOTE_SINGLE);
 end;
 
 function TStringHelper.Replace(const ASearchStr, aReplaceStr: String; aCompareOption: TCompareOption): string;
@@ -2130,6 +2158,16 @@ end;
 function TDateHelper.IsNotNull: Boolean;
 begin
   Result := (Self <> NullDate);
+end;
+
+function TDateHelper.IsToday: Boolean;
+begin
+  Result := SameDate(Self, System.SysUtils.Date);
+end;
+
+function TDateHelper.IsNotToday: Boolean;
+begin
+  Result := not SameDate(Self, System.SysUtils.Date);
 end;
 
 function TDateHelper.IsInLeapYear: Boolean;
@@ -2665,7 +2703,7 @@ begin
   if IsNull then
     Result := ''
   else
-    Result := System.DateUtils.DateToISO8601(Self);
+    Result := System.DateUtils.DateToISO8601(Self,True);
 end;
 
 {$ENDREGION}
@@ -2748,6 +2786,14 @@ begin
     Self[idx] := Self[idx+1];
 
   SetLength(Self,Length(Self)-1);
+end;
+
+function TStringDynArrayHelper.Get(aIndex: Integer; const aDefault: string): string;
+begin
+  if (aIndex > High(Self)) or (aIndex < 0) then
+    Result := aDefault
+  else
+    Result := Self[aIndex];
 end;
 
 function TStringDynArrayHelper.IndexOf(const aValue: string; aStartPosition: Integer; aCompareOption: TStringHelper.TCompareOption): Integer;
