@@ -682,6 +682,10 @@ type
 
     //-------- query methods -------------------------------------------
 
+    function HoursBetween(aValue: TDateTime)       : Integer; inline;
+    function MinutesBetween(aValue: TDateTime)     : Integer; inline;
+    function SecondsBetween(aValue: TDateTime)     : Integer; inline;
+    function MillisecondsBetween(aValue: TDateTime): Integer; inline;
 
     function IsNull: Boolean                      ; inline ;
     function IsNotNull: Boolean                   ; inline ;
@@ -2612,6 +2616,11 @@ begin
   Result := TimeOf(Self);
 end;
 
+function TDateTimeHelper.HoursBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.HoursBetween(Self, aValue);
+end;
+
 function TDateTimeHelper.IsNotNull: Boolean;
 begin
   Result := Self <> NullDateTime;
@@ -2622,9 +2631,24 @@ begin
   Result := Self = NullDateTime;
 end;
 
+function TDateTimeHelper.MillisecondsBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.MilliSecondsBetween(Self, aValue);
+end;
+
+function TDateTimeHelper.MinutesBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.MinutesBetween(Self, aValue);
+end;
+
 class function TDateTimeHelper.NowToday: TDateTime;
 begin
   Result := System.SysUtils.Now;
+end;
+
+function TDateTimeHelper.SecondsBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.SecondsBetween(Self, aValue);
 end;
 
 procedure TDateTimeHelper.SetDate(const Value: TDate);
