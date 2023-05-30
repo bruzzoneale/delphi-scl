@@ -12,6 +12,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Types,
+  System.Rtti,
   System.Math,
   System.DateUtils,
   System.Masks,
@@ -21,6 +22,7 @@ uses
 
 const
   DEFAULT_FORMATFLOAT = '#,##0.00';
+  DEFAULT_FORMATINT   = '#,##0';
   CRLF = #13#10;
   CR   = #13;
   LF   = #10;
@@ -40,6 +42,13 @@ type
 {$ENDREGION}
 
   TTimeConvFormat = ( HHMM, HHMMSS, HHMMSSMSS );
+
+  TMath = record
+  public
+    
+    class function RoundTo( AValue: Double; ADecimalDigits: Integer ): Double; overload ; static ;
+    class function RoundTo( AValue: Double; ADecimalDigits: Integer; AType: Integer ): Double; overload ; static ;
+  end;
 
   TIntegerHelper = record helper for Integer
   public
@@ -165,8 +174,8 @@ type
 
     //-------- utilities ----------------------------
 
-          function RoundTo( aDecimalDigits: Integer ): Double                ; overload ; inline ;
-    class function RoundTo( aValue: Double; aDecimalDigits: Integer ): Double; overload ; static ;
+    function RoundTo( aDecimalDigits: Integer ): Double                ; overload; inline ;
+    function RoundTo( aDecimalDigits: Integer; aType: Integer ): Double; overload; inline ;
   end;
 
 
@@ -202,8 +211,8 @@ type
     function ToStringFormat( const aFormat: string; const aFormatSettings: TFormatSettings ): string; overload ; inline ;
 
 
-          function RoundTo( aDecimalDigits: Integer ): Currency                  ; overload ; inline ;
-    class function RoundTo( aValue: Currency; aDecimalDigits: Integer ): Currency; overload ; static ;
+    function RoundTo( aDecimalDigits: Integer ): Currency ; overload; inline ;     
+    function RoundTo( aDecimalDigits: Integer; aType: Integer ): Currency ; overload; inline ;
   end;
 
 
@@ -405,6 +414,7 @@ type
     function ConcatIfNotEmpty(const aSeparator, aConcatValue: string): string; inline;
 
     function ConcatIfNotNull(const aSeparator, aConcatValue: string): string ; inline;
+    function TrimLeftZero: string ;
 
     function Extract( AStart: Integer; aCount: Integer = -1 ): string ;
 
@@ -682,6 +692,10 @@ type
 
     //-------- query methods -------------------------------------------
 
+    function HoursBetween(aValue: TDateTime)       : Integer; inline;
+    function MinutesBetween(aValue: TDateTime)     : Integer; inline;
+    function SecondsBetween(aValue: TDateTime)     : Integer; inline;
+    function MillisecondsBetween(aValue: TDateTime): Integer; inline;
 
     function IsNull: Boolean                      ; inline ;
     function IsNotNull: Boolean                   ; inline ;
@@ -713,13 +727,15 @@ type
     function IndexOf(const aValue: string; aStartPosition: Integer; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive ): Integer ; overload ;
     function Count: Integer; inline;
     function First: string ; inline;
+    function ExtractFirst: string ; inline;
     function Last: string  ; inline;
+    function ExtractLast: string ; inline;
     procedure Clear ; inline;
     procedure Resize(aCount: Integer); inline;
     procedure Add(const aValue: string); overload ; inline;
     procedure Add(aValues: TStringDynArray; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ;
     procedure Add(aValues: TStrings       ; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ; inline ;
-    procedure Delete(aIndex: Integer);
+    procedure Delete(aIndex: Integer); inline;
     function Get(aIndex: Integer; const aDefault: string = ''): string;
     function ToString(const aLineSep: string = LF): string;
   end;
@@ -763,6 +779,67 @@ begin
     end;
   end;
 end;
+
+{$REGION 'TMath' }
+
+class function TMath.RoundTo(aValue: Double; aDecimalDigits: Integer): Double;
+var
+  m, i: Integer;
+begin
+  if (aDecimalDigits < 1) then
+    Result := System.Round(aValue)
+  else
+  begin
+    m := 1;
+    for i := 1 to aDecimalDigits do
+      m :=  m * 10 ;
+    Result := System.Trunc(aValue*m + IfThen(aValue > 0, 0.5, -0.5))/m;
+  end;
+end;
+
+class function TMath.RoundTo( AValue: Double; ADecimalDigits: Integer; AType: Integer ): Double;
+var
+   TpM  : integer;
+   idx  : integer;
+   Res  : double;
+   Fraz : double;
+   xSgn : integer;
+begin
+   Result := RoundTo(AValue, -ADecimalDigits);
+   if (CompareValue(Result, AValue) <> 0) then
+   begin
+     TpM := 10;
+     for idx := 1 to ADecimalDigits - 1 do
+        TpM := TpM * 10;
+     if ADecimalDigits = 0 then TpM := 1;
+
+     xSgn := 1;
+     if AValue < 0 then xSgn := -1;
+     AValue := abs(AValue);
+     Res  := RoundTo(AValue * TpM,-10);
+     Fraz := Frac(Res);
+     Res  := Trunc(Res);
+     if AType = 1 then
+     begin
+        //* Arrotondamento per Eccesso ....
+        if Fraz <> 0 then Result := xSgn * ( ( Res + 1 ) / TpM )
+                     else Result := xSgn * ( Res / TpM );
+     end
+     else  if AType = 2 then
+     begin
+        //* Arrotondamento per Diffetto ....
+        Result := xSgn * ( Res / TpM );
+     end
+     else
+     begin
+        //* Arrotondamento Matematico .....
+        if Fraz < 0.5 then Result := xSgn * ( Res / TpM )
+                      else Result := xSgn * ( ( Res + 1 ) / TpM );
+     end;
+   end;
+end;
+
+{$ENDREGION}
 
 {$REGION 'TIntegerHelper'}
 
@@ -877,7 +954,7 @@ end;
 
 function TIntegerHelper.ToFloatWithDecimals(aDecimalDigits: Integer): Double;
 begin
-  Result := Double.RoundTo(Self / Power(10, aDecimalDigits), aDecimalDigits);
+  Result := TMath.RoundTo(Self / Power(10, aDecimalDigits), aDecimalDigits);
 end;
 
 function TIntegerHelper.ToString: string;
@@ -1014,7 +1091,7 @@ end;
 
 function TFloatHelper.ToIntWithDecimals(aDecimalDigits: Integer): Int64;
 begin
-  Result := Double.RoundTo(Self * Power(10, aDecimalDigits), 0).ToInt;
+  Result := TMath.RoundTo(Self * Power(10, aDecimalDigits), 0).ToInt;
 end;
 
 function TFloatHelper.ToString: string;
@@ -1061,48 +1138,28 @@ begin
   Result := FormatFloat(aFormat, Self, aFormatSettings);
 end;
 
-class function TFloatHelper.RoundTo(aValue: Double; aDecimalDigits: Integer): Double;
-var
-  m, i: Integer;
-begin
-  if (aDecimalDigits < 1) then
-    Result := System.Round(aValue)
-  else
-  begin
-    m := 1;
-    for i := 1 to aDecimalDigits do
-      m :=  m * 10 ;
-    Result := System.Trunc(aValue*m + IfThen(aValue > 0, 0.5, -0.5))/m;
-  end;
-end;
-
 function TFloatHelper.RoundTo(aDecimalDigits: Integer): Double;
 begin
-  Result := Double.RoundTo(Self,aDecimalDigits) ;
+  Result := TMath.RoundTo(Self,aDecimalDigits) ;
+end;
+
+function TFloatHelper.RoundTo(aDecimalDigits: Integer; aType: Integer): Double ;
+begin
+  Result := TMath.RoundTo(Self,aDecimalDigits,aType) ;
 end;
 
 {$ENDREGION}
 
 {$REGION 'TCurrencyHelper'}
 
-class function TCurrencyHelper.RoundTo(aValue: Currency; aDecimalDigits: Integer): Currency;
-var
-  m,i: Integer;
-begin
-  if (aDecimalDigits < 1) then
-    Result := System.Round(aValue)
-  else
-  begin
-    m := 1;
-    for i := 1 to Max(aDecimalDigits,4) do
-      m :=  m * 10 ;
-    Result := System.Trunc(aValue*m + IfThen(aValue > 0, 0.5, -0.5))/m;
-  end;
-end;
-
 function TCurrencyHelper.RoundTo(aDecimalDigits: Integer): Currency;
 begin
-  Result := Currency.RoundTo(Self,aDecimalDigits);
+  Result := TMath.RoundTo(Self,aDecimalDigits);
+end;
+
+function TCurrencyHelper.RoundTo(aDecimalDigits: Integer; aType: Integer): Currency ;
+begin
+  Result := TMath.RoundTo(Self,aDecimalDigits,aType) ;
 end;
 
 function TCurrencyHelper.Abs: Currency;
@@ -1161,7 +1218,7 @@ end;
 
 function TCurrencyHelper.ToIntWithDecimals(aDecimalDigits: Integer): Int64;
 begin
-  Result := Currency.RoundTo(Self * Power(10, aDecimalDigits), 0).ToInt;
+  Result := TMath.RoundTo(Self * Power(10, aDecimalDigits), 0).ToInt;
 end;
 
 {$ENDREGION}
@@ -1777,6 +1834,21 @@ end;
 function TStringHelper.TrimRight: string;
 begin
   Result := System.SysUtils.TrimRight(Self);
+end;
+
+function TStringHelper.TrimLeftZero: string;
+var
+  idx: integer;
+begin
+  idx  := Low(string);
+  Self := System.SysUtils.TrimLeft(Self);
+
+  while ((Self[idx] = '0') and (idx < High(Self))) do
+  begin
+    Self[idx] := ' ';
+    inc(idx);
+  end;
+  Result := System.SysUtils.TrimLeft(Self);
 end;
 
 function TStringHelper.UppercaseLetter: string;
@@ -2612,6 +2684,11 @@ begin
   Result := TimeOf(Self);
 end;
 
+function TDateTimeHelper.HoursBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.HoursBetween(Self, aValue);
+end;
+
 function TDateTimeHelper.IsNotNull: Boolean;
 begin
   Result := Self <> NullDateTime;
@@ -2622,9 +2699,24 @@ begin
   Result := Self = NullDateTime;
 end;
 
+function TDateTimeHelper.MillisecondsBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.MilliSecondsBetween(Self, aValue);
+end;
+
+function TDateTimeHelper.MinutesBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.MinutesBetween(Self, aValue);
+end;
+
 class function TDateTimeHelper.NowToday: TDateTime;
 begin
   Result := System.SysUtils.Now;
+end;
+
+function TDateTimeHelper.SecondsBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.SecondsBetween(Self, aValue);
 end;
 
 procedure TDateTimeHelper.SetDate(const Value: TDate);
@@ -2776,16 +2868,9 @@ begin
 end;
 
 procedure TStringDynArrayHelper.Delete(aIndex: Integer);
-var
-  idx: Integer;
 begin
-  if (aIndex > High(Self)) or (aIndex < 0) then
-    Exit;
-
-  for idx := aIndex to High(Self)-1 do
-    Self[idx] := Self[idx+1];
-
-  SetLength(Self,Length(Self)-1);
+  if (aIndex <= High(Self)) and (aIndex >= 0) then
+    System.Delete(Self,aIndex,1);
 end;
 
 function TStringDynArrayHelper.Get(aIndex: Integer; const aDefault: string): string;
@@ -2824,10 +2909,32 @@ begin
     Result := '';
 end;
 
+function TStringDynArrayHelper.ExtractFirst: string;
+begin
+  if Length(Self) > 0 then
+  begin
+    Result := Self[0];
+    Delete(0);
+  end
+  else
+    Result := '';
+end;
+
 function TStringDynArrayHelper.Last: string;
 begin
   if Length(Self) > 0 then
     Result := Self[High(Self)]
+  else
+    Result := '';
+end;
+
+function TStringDynArrayHelper.ExtractLast: string;
+begin
+  if Length(Self) > 0 then
+  begin
+    Result := Self[High(Self)];
+    Delete(High(Self));
+  end
   else
     Result := '';
 end;
