@@ -1,6 +1,13 @@
 {
-  @SCL.Types(standard base class and helpers for standard data types)
-  @author(bruzzoneale)
+  SCL.Types
+  author(bruzzoneale@gmail.com)
+
+  Definition of the base classes for managing native data types
+  encapsulated in dedicated classes with related conversion and
+  manipulation routines.
+
+  All methods that return their own type always return a reference to themselves
+  and are typically methods that alter the stored value.
 }
 unit SCL.Types;
 
@@ -28,417 +35,528 @@ const
   LF   = #10;
   QUOTE_SINGLE = #39;
   QUOTE_DOUBLE = #34;
+  STRING_BASE_INDEX = Low(string);
+
+  NullDateTime = 0.0;
+  NullDate     = 0.0;
+  NullTime     = 0.0;
+  NullString   = '';
 
 type
+  /// <summary>
+  /// Base for specific exceptions raised by SCL.Types
+  /// </summary>
   ECommonTypesException = class(Exception)
   end;
-
+  /// <summary>
+  /// Errors caused by incorrect parameters
+  /// </summary>
   EInvalidArgument = class(ECommonTypesException)
   end;
 
 {$REGION 'Aliases'}
-  TNetEncoding    = System.NetEncoding.TNetEncoding;
+  /// <summary>
+  /// Alias for standard data types
+  /// </summary>
+  TNetEncoding = System.NetEncoding.TNetEncoding;
   TStringDynArray = System.Types.TStringDynArray;
 {$ENDREGION}
 
+  /// <summary>
+  /// Dynamic arrays
+  /// </summary>
+  TTimeDynArray     = array of TTime;
+  TDateTimeDynArray = array of TDateTime;
+  TTDateDynArray    = array of TDate;
+  TIntegerDynArray  = array of Integer;
+
   TTimeConvFormat = ( HHMM, HHMMSS, HHMMSSMSS );
 
+  /// <summary>
+  ///   Set of general utility mathematical routines
+  /// </summary>
   TMath = record
   public
-    
+    /// <summary> Rounds a number to the indicated decimal places using mathematical rounding </summary>
     class function RoundTo( AValue: Double; ADecimalDigits: Integer ): Double; overload ; static ;
     class function RoundTo( AValue: Double; ADecimalDigits: Integer; AType: Integer ): Double; overload ; static ;
   end;
 
+  /// <summary>
+  /// Helper for the 32-bit signed integer data type (Integer)
+  /// </summary>
   TIntegerHelper = record helper for Integer
   public
     const  MaxValue = 2147483647;
     const  MinValue = -2147483648;
 
-    function Inc: Integer                      ; overload; inline ;
+    //-------- Value modification methods -----------------------------------
 
+    /// <summary> Increments the integer by 1 </summary>
+    function Inc: Integer                    ; overload; inline ;
+    /// <summary> Increments the integer by the indicated value </summary>
     function IncBy( aIncBy: Integer ): Integer ; overload; inline ;
-
-    function Dec: Integer                      ; overload; inline ;
-
+    /// <summary> Decrements the integer by 1 </summary>
+    function Dec: Integer                    ; overload; inline ;
+    /// <summary> Decrements the integer by the indicated value </summary>
     function DecBy( aDecBy: Integer ): Integer ; overload; inline ;
 
-    //-------- query methods  ---------------------------------------
+    //-------- Query methods ---------------------------------------
 
+    /// <summary> Returns the absolute value of the integer </summary>
     function Abs: Integer ; overload ; inline ;
 
-    //-------- conversion methods -------------------------------------------
+    function IsZero: Boolean; inline;
 
+    //-------- Conversion methods -------------------------------------------
+
+    /// <summary> Converts the integer to a string </summary>
     function ToString: string ; overload ; inline ;
-
+    /// <summary> Converts the integer to a fixed-length string, right-aligning it and specifying the padding character </summary>
     function ToString( aLength: Integer; aLeadingChar: Char=' ' ): string ; overload ; inline ;
-
+    /// <summary> Converts the integer to a fixed-length string, right-aligning it and using zero as padding </summary>
     function ToStringZero( aLength: Integer ): string ; inline;
-
+    /// <summary> Converts the integer to a string representing it as a hexadecimal value </summary>
     function ToStringHex: string                      ; inline ;
-
+    /// <summary> Converts the integer to a string representing it with Roman numerals </summary>
     function ToStringRoman: string;
-
+    /// <summary> Converts the integer to a string with formatting </summary>
     function ToStringFormat( const aFormat: string ): string ; overload ; inline ;
-
+    /// <summary> Converts the integer to a string with formatting (Thread-Safe) </summary>
     function ToStringFormat( const aFormat: string; const aFormatSettings: TFormatSettings ): string ; overload ; inline ;
-
-    /// <summary> Converts integer in a date: assuming integer value format as YYYYMMDD </summary>
+    /// <summary> Converts the integer to a date: the integer is assumed to be in YYYYMMDD format </summary>
     function ToDate: TDate ;
-
-    /// <summary> Converts integer in time: assuming integer value format as HHMMSSMMS or HHMMSS or HHMM </summary>
+    /// <summary> Converts the integer to a time: the integer is assumed to be in HHMMSSMSS or HHMMSS or HHMM format </summary>
     function ToTime(aFormat: TTimeConvFormat = HHMMSSMSS): TTime ; inline ;
-
-    /// <summary>
-    ///   Converts integer value to double assuming fixed decimal digits
-    ///   Example:  ToFloatWithDecimals(20099, 2) => 200.99
-    /// </summary>
+    /// <summary> Converts the integer to a Double assuming that decimals are also present (fixed number of digits) </summary>
     function ToFloatWithDecimals(aDecimalDigits: Integer): Double; inline ;
 
-    //-------- utlities ----------------------------
+    //-------- Generic methods ----------------------------
 
     /// <summary>
-    ///  Simple random number generator: aTotValues assuming maximun values
-    ///  Example: Random(100) => a random number between 0 and 99
+    /// Generates a uniform random integer (same probability for each possible value)
+    /// ATotValues represents the total number of possible values that the method can return
+    /// (e.g., if 100, then Random returns a random number between 0 and 99)
+    /// If not specified, any number within the Integer range is returned
     /// </summary>
-    class function Random( aTotValues: Integer = MaxValue): Integer ; static ;
-
-    class procedure Swap(var aValue1, aValue2: Integer)   ; static ; inline ;
+    class function Random( aTotValues: Integer=0): Integer ; static ;
+    /// <summary> Swaps the value of the two variables </summary>
+    class procedure Swap(var aValue1, aValue2: Integer)  ; static ; inline ;
   end;
 
-
-
+  /// <summary>
+  /// Helper for the 64-bit signed integer data type (Int64)
+  /// </summary>
   TInt64Helper = record helper for Int64
   public
     const  MaxValue = 9223372036854775807;
     const  MinValue = -9223372036854775808;
 
-    function Inc: Int64        ; overload ; inline ;
+    //-------- Value modification methods -----------------------------------
 
+    /// <summary> Increments the integer by 1 </summary>
+    function Inc: Int64     ; overload ; inline ;
+    /// <summary> Increments the integer by the indicated value </summary>
     function IncBy( aIncBy: Integer ): Int64 ; overload; inline ;
 
-    //-------- query methods  ---------------------------------------
+    //-------- Query methods ---------------------------------------
 
-    function Abs: Int64             ; overload ; inline ;
+    /// <summary> Returns the absolute value of the integer </summary>
+    function Abs: Int64                ; overload ; inline ;
 
-    //-------- conversion methods -----------------------------------
+    function IsZero: Boolean; inline;
 
+    //-------- Conversion methods -------------------------------------------
+
+    /// <summary> Converts the integer to a string </summary>
     function ToString: string ; overload ; inline ;
-
+    /// <summary> Converts the integer to a fixed-length string, right-aligning it and specifying the padding character </summary>
     function ToString( aLength: Integer; aLeadingChar: Char=' ' ): string ; overload ; inline;
-
+    /// <summary> Converts the integer to a fixed-length string, right-aligning it and using zero as padding </summary>
     function ToStringZero( aLength: Integer ): string ; inline ;
-
-    function ToStringFormat( const aFormat: string ): string                ; overload ; inline ;
-
+    /// <summary> Converts the integer to a string with formatting </summary>
+    function ToStringFormat( const aFormat: string ): string            ; overload ; inline ;
+    /// <summary> Converts the number to a string with formatting (Thread-Safe)</summary>
     function ToStringFormat( const aFormat: string; const aFormatSettings: TFormatSettings ): string ; overload ; inline ;
   end;
 
 
+  /// <summary>
+  /// Helper for floating-point numbers (Double)
+  /// </summary>
   TFloatHelper = record helper for Double
   public
     const  MaxValue:Double =  1.7976931348623157081e+308;
     const  MinValue:Double = -1.7976931348623157081e+308;
 
-    //-------- query methods  ---------------------------------------
+    //-------- Query methods ---------------------------------------
 
+    /// <summary> Returns the absolute value of the number </summary>
     function Abs : Double ; inline ;
-
+    /// <summary> Returns the integer part of a number </summary>
     function Int : Double ; inline ;
-
+    /// <summary> Returns the fractional part of a number </summary>
     function Frac: Double ; inline ;
 
-    //-------- conversion methods -----------------------------------
+    /// <summary> Determines if the value is to be considered zero </summary>
+    function IsZero: Boolean; inline;
 
+    //-------- Conversion methods -------------------------------------------
+
+    /// <summary> Converts the number to an integer by truncating the decimal part </summary>
     function ToInt: Int64  ; inline ;
-
+    /// <summary> Converts to an integer keeping the indicated number of decimal places at the end of the integer part (e.g., 128.88 => 12888) </summary>
     function ToIntWithDecimals(aDecimalDigits: Integer): Int64 ; inline ;
-
+    /// <summary> Converts the number as an integer with mathematical rounding </summary>
     function ToRoundInt: Int64                  ; inline ;
-
-    function ToString: string                                             ; overload ; inline ;
-
-    function ToString(aDecimalSeparator: Char): string                    ; overload ; inline ;
-
+    /// <summary> Converts the number to a string </summary>
+    function ToString: string                                       ; overload ; inline ;
+    /// <summary> Converts the number to a string specifying a character as the decimal separator</summary>
+    function ToString(aDecimalSeparator: Char): string              ; overload ; inline ;
+    /// <summary> Converts the number to a string specifying a character as the decimal separator and using a fixed number of digits for the decimals</summary>
+    function ToString(aDecimalSeparator: Char; aDecimalDigits: Integer): string ; overload ; inline ;
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and specifying the padding character</summary>
     function ToString( aLength: Integer; aLeadingChar: Char=' ' ): string ; overload ; inline ;
-
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and specifying the padding character and decimal separator</summary>
     function ToString( aLength: Integer; aLeadingChar: Char; aDecimalSeparator: Char): string ; overload ; inline ;
-
-    function ToStringZero( aLength: Integer ): string                         ; overload ; inline ;
-
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and using zero as padding </summary>
+    function ToStringZero( aLength: Integer ): string                  ; overload ; inline ;
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and using zero as padding and specifying the decimal separator </summary>
     function ToStringZero( aLength: Integer; aDecimalSeparator: Char): string ; overload ; inline ;
-
+    /// <summary> Converts the number to a string with formatting </summary>
     function ToStringFormat( const aFormat: string=DEFAULT_FORMATFLOAT ): string; overload ; inline ;
-
+    /// <summary> Converts the number to a string with Thread-Safe formatting</summary>
     function ToStringFormat(const aFormat: string; const aFormatSettings: TFormatSettings ): string; overload ; inline ;
 
-    //-------- utilities ----------------------------
+    //-------- Generic methods ----------------------------
 
-    function RoundTo( aDecimalDigits: Integer ): Double                ; overload; inline ;
-    function RoundTo( aDecimalDigits: Integer; aType: Integer ): Double; overload; inline ;
+    /// <summary> Rounds the number to the indicated decimal places using mathematical rounding </summary>
+    function RoundTo( aDecimalDigits: Integer ): Double ; overload; inline ;
+    /// <summary> Rounds the number to the indicated decimal places using selectable rounding </summary>
+    function RoundTo( aDecimalDigits: Integer; aType: Integer ): Double ; overload; inline ;
   end;
 
-
+  /// <summary>
+  /// Helper for fixed-point numbers with 4 decimal places (Currency)
+  /// </summary>
   TCurrencyHelper = record helper for Currency
   public
     const MinValue: Currency = -922337203685477.5807 {$IFDEF LINUX} + 1 {$ENDIF};
     const MaxValue: Currency =  922337203685477.5807 {$IFDEF LINUX} - 1 {$ENDIF};
 
-    //-------- query methods  ---------------------------------------
+    //-------- Query methods ---------------------------------------
 
+    /// <summary> Returns the absolute value of the number </summary>
     function Abs : Currency ; overload ;
 
-    //-------- conversion methods -----------------------------------
-   
-    function ToInt: Int64                 ; inline ;
-    
-    function ToIntWithDecimals(aDecimalDigits: Integer): Int64 ; inline ;
-    
-    function ToString: string                                             ; overload ; inline ;
-    
-    function ToString(aDecimalSeparator: Char): string                    ; overload ; inline ;
-    
-    function ToString( aLength: Integer; aLeadingChar: Char=' ' ): string ; overload ; inline;
-    
-    function ToString( aLength: Integer; aLeadingChar: Char; aDecimalSeparator: Char): string ; overload ; inline ;
-    
-    function ToStringZero(aLength: Integer ): string                          ; overload ;inline ;
-    
-    function ToStringZero( aLength: Integer; aDecimalSeparator: Char): string ; overload ; inline ;
-    
-    function ToStringFormat( const aFormat: string=DEFAULT_FORMATFLOAT ): string  ; overload ; inline ;
+    /// <summary> Determines if the value is to be considered zero </summary>
+    function IsZero: Boolean; inline;
 
+    //-------- Conversion methods -------------------------------------------
+
+    /// <summary> Converts the number to an integer by truncating the decimal part </summary>
+    function ToInt: Int64                ; inline ;
+    /// <summary> Converts to an integer keeping the indicated number of decimal places at the end of the integer part (e.g., 128.88 => 12888) </summary>
+    function ToIntWithDecimals(aDecimalDigits: Integer): Int64 ; inline ;
+    /// <summary> Converts the number to a string </summary>
+    function ToString: string                                       ; overload ; inline ;
+    /// <summary> Converts the number to a string specifying a character as the decimal separator</summary>
+    function ToString(aDecimalSeparator: Char): string              ; overload ; inline ;
+    /// <summary> Converts the number to a string specifying a character as the decimal separator and using a fixed number of digits for the decimals</summary>
+    function ToString(aDecimalSeparator: Char; aDecimalDigits: Integer): string ; overload ; inline ;
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and specifying the padding character </summary>
+    function ToString( aLength: Integer; aLeadingChar: Char=' ' ): string ; overload ; inline;
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and specifying the padding character and decimal separator</summary>
+    function ToString( aLength: Integer; aLeadingChar: Char; aDecimalSeparator: Char): string ; overload ; inline ;
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and using zero as padding </summary>
+    function ToStringZero(aLength: Integer ): string                  ; overload ;inline ;
+    /// <summary> Converts the number to a fixed-length string, right-aligning it and using zero as padding and specifying the decimal separator </summary>
+    function ToStringZero( aLength: Integer; aDecimalSeparator: Char): string ; overload ; inline ;
+    /// <summary> Converts the number to a string with formatting </summary>
+    function ToStringFormat( const aFormat: string=DEFAULT_FORMATFLOAT ): string  ; overload ; inline ;
+    /// <summary> Converts the number to a string with formatting </summary>
     function ToStringFormat( const aFormat: string; const aFormatSettings: TFormatSettings ): string; overload ; inline ;
 
+    //-------- Generic methods ----------------------------
 
-    function RoundTo( aDecimalDigits: Integer ): Currency ; overload; inline ;     
+    /// <summary> Rounds the number to the indicated decimal places using mathematical rounding (max 4 decimal places) </summary>
+    function RoundTo( aDecimalDigits: Integer ): Currency ; overload; inline ;
+    /// <summary> Rounds the number to the indicated decimal places using selectable rounding (max 4 decimal places) </summary>
     function RoundTo( aDecimalDigits: Integer; aType: Integer ): Currency ; overload; inline ;
   end;
 
-
-
+  /// <summary>
+  /// Collection of commonly used character sets
+  /// </summary>
   TBaseCharSet = class
   public
     const
+    /// <summary> Standard ASCII visual character set </summary>
     VisualRangeSet: TSysCharSet = ['\','$','%','&','@','*','+','/','A'..'Z',
                                    'a'..'z','{','}','(',')','>','<','?',
                                    '0'..'9','[',']'] ;
 
+    /// <summary> Standard ASCII alphabetic character set </summary>
     AlphabeticCharSet: TSysCharSet =  ['A'..'Z','a'..'z'] ;
+    /// <summary> Commonly used characters as word separators </summary>
     WordSeparatorsSet: TSysCharSet = [' ',',','.',';','/','\',':','''','"','`','(',')','[',']','{','}'] ;
-    NumericSet   : TSysCharSet = ['0','1','2','3','4','5','6','7','8','9',',','.','-','+'] ;
-    IntegerSet   : TSysCharSet = ['0','1','2','3','4','5','6','7','8','9','-','+'] ;
+    /// <summary> Valid characters for real numbers </summary>
+    NumericSet     : TSysCharSet = ['0','1','2','3','4','5','6','7','8','9',',','.','-','+'] ;
+    /// <summary> Valid characters for integers </summary>
+    IntegerSet     : TSysCharSet = ['0','1','2','3','4','5','6','7','8','9','-','+'] ;
+    /// <summary> Valid characters for hexadecimal numbers </summary>
     HexIntegerSet: TSysCharSet = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','a','b','c','d','e','f','-','+'] ;
+    /// <summary> Valid characters for numbers in scientific notation </summary>
     ScientificSet: TSysCharSet = ['0','1','2','3','4','5','6','7','8','9',',','.','-','+','E','e'] ;
+    /// <summary> Valid characters for Boolean values </summary>
     BooleanTrueSet: TSysCharSet = ['1','T','t','Y','y','S','s'] ;
-    BracketsSet   : TSysCharSet = ['(',')','[',']','{','}'] ;
+    /// <summary> Characters used for parentheses </summary>
+    BracketsSet    : TSysCharSet = ['(',')','[',']','{','}'] ;
 
   const
+   /// <summary> Valid characters for MIME base 64 encoding </summary>
     b64_MIMEBase64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+   /// <summary> Valid characters for ASCII base 64 encoding </summary>
     b64_UUEncode   = ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_';
+   /// <summary> Valid characters for base 64 encoding </summary>
     b64_XXEncode   = '+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+   /// <summary> Valid characters for standard ASCII symbols and characters </summary>
     ASCII_Standard = ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}';
+    /// <summary> Valid characters for MIME base 36 encoding </summary>
+    b36_MIMEBase36 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   end;
 
-
   /// <summary>
-  ///  record helper for strings
-  ///  as opposite to RTL System.SysUtils.TStringHelper, in this helper all methods manage
-  ///  index string contents as 1-based for all platform
+  /// Alternative helper implementation for the string data type
+  /// ALL functions ALWAYS use 1-based string indexing even on mobile platforms
+  /// however, be careful if you want to access individual characters of a string as an array,
+  /// in that case, using Chars[] of this StringHelper the access will always be 1-based
   /// </summary>
+  /// <remarks>
+  /// Be aware of System.SysUtils.TStringHelper as this helper instead works in the opposite way,
+  /// always managing strings as 0-based regardless of the platform, so it is
+  /// recommended NOT to mix helpers in the same application but choose to adopt a UNIQUE
+  /// method otherwise there is a risk of great confusion
+  /// </remarks>
   TStringHelper = record helper for String
   private
     function GetChars(AIndex: Integer): Char; inline;
     function GetLastChar : Char; inline;
     function GetFirstChar: Char; inline;
   public
-    const NullString: string = '';
     type  TCompareOption = ( coCaseInsensitive, coCaseSensitive ) ;
     type  TOptionBOM = (obWithoutBOM, obIncludeBOM);
 
-    //-------- conversion methods -----------------------------------
+    //-------- Conversion methods -------------------------------------------
 
-
-    function ToInt(aDefault: Integer = 0): Integer                        ; inline ;
-
-    function ToHexInt(aDefault: Integer = 0): Integer                     ; inline ;
-
-    function ToRomanInt(aDefault:Integer = 0): Integer                    ;
-
-    function ToInt64(aDefault: Int64 = 0): Int64                          ; inline ;
-
-    function ToFloat(aDefault: Double = 0; aDecimalSeparator: Char = #0): Double                       ; inline ;
-
-    function ToCurrency(aDefault: Currency = 0; aDecimalSeparator: Char = #0): Currency                ; inline ;
-
-    function ToDate(aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aDateFormat: string=''):TDate; inline ;
-
-    function ToTime(aDefault: TDateTime = 0.0; aTimeSeparator: Char = #0):TTime                        ; inline ;
-
-    function ToDateTime(aDefault: TDateTime = 0.0; aDateSeparator: Char = #0; aTimeSeparator: Char = #0):TDateTime; inline ;
-
-    function ToDateTimeISO(aDefault: TDateTime = 0.0):TDateTime; inline ;
-
-    function ToDateTimeUTC(aDefault: TDateTime = 0.0):TDateTime; inline ;
-
-    function ToUpper: string                       ; inline ;
-
-    function ToLower: string                       ; inline ;
-
-    function ToHTML: string                        ; inline ;
-
-    function ToURL: string                         ; inline ;
-
-    function ToBase64: string                      ; overload ; inline ;
-
+    /// <summary> Converts the string to Integer (returns 0 if not possible) </summary>
+    function ToInt: Integer                                           ; overload; inline ;
+    /// <summary> Converts the string to Integer (returns ADefault if not possible) </summary>
+    function ToInt(aDefault: Integer): Integer                      ; overload; inline ;
+    /// <summary> Converts the string containing a hexadecimal number to a decimal integer with default </summary>
+    function ToHexInt(aDefault: Integer = 0): Integer                ; inline ;
+    /// <summary> Converts the string containing a Roman numeral to an integer with default </summary>
+    function ToRomanInt(aDefault:Integer = 0): Integer                ;
+    /// <summary> Converts the string to 64-bit Integer (returns ADefault if not possible) </summary>
+    function ToInt64(aDefault: Int64 = 0): Int64                      ; inline ;
+    /// <summary> Converts the string to a real number (returns ADefault if not possible) </summary>
+    function ToFloat(aDefault: Double = 0; aDecimalSeparator: Char = #0): Double                  ; inline ;
+    /// <summary> Converts the string to a fixed-point number (returns ADefault if not possible) </summary>
+    function ToCurrency(aDefault: Currency = 0; aDecimalSeparator: Char = #0): Currency              ; inline ;
+    /// <summary> Converts the string to a date (returns ADefault if not possible) </summary>
+    function ToDate(aDefault: TDateTime = NullDateTime; aDateSeparator: Char = #0; aDateFormat: string=''):TDate; inline ;
+    /// <summary> Converts the string to a time (returns ADefault if not possible). A separator different from the system default can be defined </summary>
+    function ToTime(aDefault: TDateTime = NullDateTime; aTimeSeparator: Char = #0):TTime                  ; inline ;
+    /// <summary> Converts the string to a date/time (returns ADefault if not possible). A separator different from the system default can be defined </summary>
+    function ToDateTime(aDefault: TDateTime = NullDateTime; aDateSeparator: Char = #0; aTimeSeparator: Char = #0):TDateTime; inline ;
+    /// <summary> Converts the string in ISO8601 format to date/time (returns ADefault if not possible) taking into account the local time zone </summary>
+    function ToDateTimeISO(aDefault: TDateTime = NullDateTime):TDateTime; inline ;
+    /// <summary> Converts the string in ISO8601 date/time format (returns ADefault if not possible) without modifying the time (intended as absolute) </summary>
+    function ToDateTimeUTC(aDefault: TDateTime = NullDateTime):TDateTime; inline ;
+    /// <summary> Converts the string to uppercase (Unicode)</summary>
+    function ToUpper: string                                         ; inline ;
+    /// <summary> Converts the entire string to lowercase (Unicode)</summary>
+    function ToLower: string                                         ; inline ;
+    /// <summary> Converts any special characters in the string to the format compatible with HTML/XML </summay>
+    function ToHTML: string                                          ; inline ;
+    /// <summary> Converts any special characters in the string to be used as a URL (typically adapts GET parameters) </summay>
+    function ToURL: string                                           ; inline ;
+    /// <summary> Encodes the string in BASE64 (without any formatting) </summay>
+    function ToBase64: string                                        ; overload ; inline ;
+    /// <summary> Encodes the string in BASE64 and formats it by adding a separator every ACharsPerLine characters (default CRLF) </summay>
     function ToBase64(aCharsPerLine: Integer; const aSeparator: string = CRLF): string ; overload ;
+    /// <summary> Assuming the string is BASE64 encoded, returns the decoded string without considering any formatting </summary>
+    function FromBase64: string                                       ; overload ; inline ;
+    function FromBase64(const aSeparator: string): string            ; overload ; inline ;
 
-    function FromBase64: string                                  ; overload ; inline ;
-    function FromBase64(const aSeparator: string): string        ; overload ; inline ;
-
+    /// <summary> Writes the entire content of the string to a file (overwriting it if it exists)
+    /// <param>aEncoding</param> you can specify an encoding for Unicode (by default treats the file as ANSI in the current codepage)
+    /// <param>aOptionBOM</param> determines whether to write the BOM to the file (which will be used for reading)
+    /// </summary>
     procedure ToFile(const aFileName: string; aEncoding: TEncoding = nil; aOptionBOM: TOptionBOM = obWithoutBOM);
 
+    /// <summary> Returns the MD5 of the string </summary>
     function ToMD5: string; inline;
-    
-    //-------- query methods  --------------------------------
 
+    //-------- Query methods --------------------------------
 
-    function IsNull: Boolean                          ; inline ;
-
-    function IsNotNull: Boolean                       ; inline ;
-
-    function IsEmpty: Boolean                         ; inline ;
-
-    function IsNotEmpty: Boolean                      ; inline ;
-
-    function IfNull(const aDefault: string): string   ; inline ;
-
-    function IfEmpty(const aDefault: string): string  ; inline ;
-
-    procedure IfNotEmpty(aProc: TProc<string>)        ; overload ; inline ;
-
+    /// <summary> Indicates whether the string is null </summary>
+    function IsNull: Boolean                                      ; inline ;
+    /// <summary> Indicates whether the string is not null </summary>
+    function IsNotNull: Boolean                                   ; inline ;
+    /// <summary> Indicates whether the string is empty or consists only of spaces </summary>
+    function IsEmpty: Boolean                                     ; inline ;
+    /// <summary> Indicates whether the string is not empty and does not consist only of spaces </summary>
+    function IsNotEmpty: Boolean                                  ; inline ;
+    /// <summary> If the string is null, returns the alternative string indicated as ADefault, otherwise returns the value of the string </summary>
+    function IfNull(const aDefault: string): string               ; inline ;
+    /// <summary> If the string is empty (null or only spaces), returns the alternative string indicated as ADefault, otherwise returns the value of the string </summary>
+    function IfEmpty(const aDefault: string): string              ; inline ;
+    /// <summary> Executes an anonymous procedure if the string is not empty (the string is passed as a parameter) </summary>
+    procedure IfNotEmpty(aProc: TProc<string>)                    ; overload ; inline ;
+    /// <summary> Executes an anonymous function if the string is not empty and returns its result, otherwise returns an optional default value </summary>
     function IfNotEmpty(aFunc: TFunc<string,string>; aDefault: string=''): string; overload ; inline ;
-
-    function Len: Integer                      ; inline;
-
-    function Left( aCount: Integer ): string   ; inline ;
-
-    function Right( aCount: Integer ): string  ; inline ;
-
-    function Copy ( aStart: Integer; aCount: Integer ): string ; inline ;
-
-    function CopyFrom ( aStart: Integer): string               ; inline ;
-
-    function Pos(const aSubStr: string ; aStartChar: Integer = 0): Integer     ; inline ;
-
+    /// <summary> Returns the number of characters in the string </summery>
+    function Len: Integer                                        ; inline;
+    function Length: Integer                                     ; inline;
+    /// <summary> Returns the first ACount characters of the string </summary>
+    function Left( aCount: Integer ): string                     ; inline ;
+    /// <summary> Returns the last ACount characters of the string </summary>
+    function Right( aCount: Integer ): string                    ; inline ;
+    /// <summary> Returns a substring from character AStart (always 1-based index) with ACount characters </summary>
+    function Copy ( aStart: Integer; aCount: Integer ): string    ; inline ;
+    /// <summary> Returns a substring from character AStart to the end </summary>
+    function CopyFrom ( aStart: Integer): string                  ; inline ;
+    /// <summary> Searches for a substring within the string starting from the left at character AStartChar (default is the first character), always case-sensitive </summary>
+    function Pos(const aSubStr: string ; aStartChar: Integer = 0): Integer    ; inline ;
+    /// <summary> Searches for a substring within the string starting from the right at character AOffSet, always case-sensitive </summary>
     function PosRight(const aSubStr: string ; aStartChar: Integer = 0): Integer; inline ;
 
-
+    /// <summary>
+    /// Searches for the string within the indicated array and returns its position. Returns -1 if not present.
+    /// Can be used to leverage: case IndexInArray() of ... even with strings (case-sensitive by default)
+    /// </summary>
     function IndexInArray(const aValues: TStringDynArray; aCompareOption: TCompareOption): Integer; overload ; inline ;
-    function IndexInArray(const aValues: TStringDynArray): Integer                                ; overload ; inline ;
-
+    function IndexInArray(const aValues: TStringDynArray): Integer                                   ; overload ; inline ;
+    /// <summary> Checks if the string is present within the indicated array (case-sensitive by default) </summary>
     function IsInArray(const aValues: TStringDynArray; aCompareOption: TCompareOption): Boolean; overload ; inline ;
-    function IsInArray(const aValues: TStringDynArray): Boolean                                ; overload ; inline ;
+    function IsInArray(const aValues: TStringDynArray): Boolean                                    ; overload ; inline ;
+    /// <summary> Indicates whether the string is equal to the indicated string (case-insensitive) </summary>
+    function SameAs(const aValue: string): Boolean                ; inline ;
+    /// <summary> Indicates whether the string is equal to the indicated string (case-sensitive) </summary>
+    function Equals(const aValue: string): Boolean                ; inline ;
+    /// <summary> Indicates whether the string has the initial characters equal to aSubStr (case-sensitive by default) </summary>
+    function StartsWith(const aSubStr: string): Boolean                                             ; overload ; inline ;
+    function StartsWith(const aSubStr: string; aCompareOption: TCompareOption): Boolean           ; overload ; inline ;
+    /// <summary> Indicates whether the string has the final characters equal to aSubStr (case-sensitive by default) </summary>
+    function EndsWith(const aSubStr: string): Boolean                                               ; overload ; inline ;
+    function EndsWith(const aSubStr: string; aCompareOption: TCompareOption): Boolean             ; overload ; inline ;
+    /// <summary> Indicates whether a substring is present within the string (case-sensitive by default)</summary>
+    function Contains( const aSubStr: string): Boolean                                             ; overload ; inline ;
+    function Contains( const aSubStr: string; aCompareOption: TCompareOption): Boolean           ; overload ; inline ;
+    /// <summay> Checks if the string meets the criteria of a mask containing wildcards (*,?), always Case-Insensitive </summay>
+    function MatchesMask( const aMask: string): Boolean          ; inline ;
 
-    function SameAs(const aValue: string): Boolean           ; inline ;
-
-    function Equals(const aValue: string): Boolean           ; inline ;
-
-    function StartsWith(const aSubStr: string): Boolean                                 ; overload ; inline ;
-    function StartsWith(const aSubStr: string; aCompareOption: TCompareOption): Boolean ; overload ; inline ;
-
-    function EndsWith(const aSubStr: string): Boolean                                   ; overload ; inline ;
-    function EndsWith(const aSubStr: string; aCompareOption: TCompareOption): Boolean   ; overload ; inline ;
-
-    function Contains( const aSubStr: string): Boolean                                  ; overload ; inline ;
-    function Contains( const aSubStr: string; aCompareOption: TCompareOption): Boolean  ; overload ; inline ;
-
-    function MatchesMask( const aMask: string): Boolean      ; inline ;
-
-
-    function WordCount(aWordSeparators: TSysCharSet = [] ): Integer                        ; inline ;
-
-    function WordPos(aWordNum: Integer; aWordSeparators: TSysCharSet = []): Integer        ; inline ;
-
-    function WordAt(aWordNum: Integer; aWordSeparators: TSysCharSet = []): string          ; inline ;
-
+    /// <summary> Returns the total number of words contained in the string </summary>
+    function WordCount(aWordSeparators: TSysCharSet = [] ): Integer                              ; inline ;
+    /// <summary> Returns the starting character position of the word number aWordNum (starting from zero) in the string </summary>
+    function WordPos(aWordNum: Integer; aWordSeparators: TSysCharSet = []): Integer              ; inline ;
+    /// <summary> Returns the word number aWordNum (starting from zero) in the string </summary>
+    function WordAt(aWordNum: Integer; aWordSeparators: TSysCharSet = []): string                ; inline ;
+    /// <summary> Returns True if the indicated word is present in the string (case-insensitive) </summary>
     function IsWordPresent(const aWord: string; aWordSeparators: TSysCharSet = []): Boolean; inline ;
 
-
+    /// <summary> Query on the type of content of the string </summary>
     function IsInteger: Boolean   ; inline;
     function IsInt64  : Boolean   ; inline;
     function IsFloat  : Boolean   ; overload; inline;
     function IsFloat(aDecimalSeparator: Char): Boolean ; overload; inline;
     function IsDate(aDateSeparator: Char = #0; const aDateFormat: string = ''): Boolean; inline;
-    function IsTime(aTimeSeparator: Char = #0): Boolean                                ; inline;
+    function IsTime(aTimeSeparator: Char = #0): Boolean                                           ; inline;
 
-    //-------- string manipulation methods ----------------------------
+    //-------- String manipulation methods ----------------------------
 
-
+    /// <summary> Returns the string right-aligned to the length aLength with ALeadingChar as the left padding character </summary>
     function PadLeft  ( aLength: Integer; ALeadingChar: char =' ' ): string  ;
-
+    /// <summary> Returns the string left-aligned to the length aLength with ALeadingChar as the right padding character </summary>
     function PadRight ( aLength: Integer; ALeadingChar: char =' ' ): string  ;
-
+    /// <summary> Returns the string center-aligned to the length aLength with ALeadingChar as the side padding character </summary>
     function PadCenter( aLength: Integer; ALeadingChar: char =' ' ): string  ;
-
-    function TrimLeft: string            ; inline;
-
-    function TrimRight: string; overload ; inline;
-
-    function Trim: string                ; inline;
-
-    function QuotedString: string                                                     ; overload; inline ;
-    function QuotedString(const aQuoteChar: Char): string                             ; overload; inline ;
-
-    function DeQuotedString: string                                                   ; overload; inline ;
-    function DeQuotedString(const aQuoteChar: Char): string                           ; overload; inline ;
-
-    function UppercaseLetter: string  ; inline ;
-
+    /// <summary> Returns the string without leading spaces </summary>
+    function TrimLeft: string                                       ; inline;
+    /// <summary> Returns the string without trailing spaces </summary>
+    function TrimRight: string; overload                           ; inline;
+    /// <summary> Returns the string without leading and trailing spaces </summary>
+    function Trim: string                                          ; inline;
+    /// <summary> Returns the string enclosed in quotes using the indicated character as the quote (' by default) </summary>
+    function QuotedString: string                                                   ; overload; inline ;
+    function QuotedString(const aQuoteChar: Char): string                          ; overload; inline ;
+    /// <summary> Returns the string without the quotes that enclose it (' by default) </summary>
+    function DeQuotedString: string                                                 ; overload; inline ;
+    function DeQuotedString(const aQuoteChar: Char): string                        ; overload; inline ;
+    /// <summary> Returns the string in lowercase with the first letter uppercase </summary>
+    function UppercaseLetter: string ; inline ;
+    /// <summary> Returns the string with all words in lowercase and the initial letter uppercase </summary>
     function UppercaseWordLetter(aWordSeparators: TSysCharSet = [] ): string;
-
-    function EnsurePrefix(const aPrefix: string): string        ; inline;
-
-    function EnsureSuffix(const aSuffix: string): string        ; inline ;
-
-    function Replace( const aSearchStr, aReplaceStr: string): string                                 ; overload ; inline ;
+     /// <summary> Returns the string with the indicated prefix (if already present, it is not modified), always case-sensitive </summary>
+    function EnsurePrefix(const aPrefix: string): string                ; inline;
+    /// <summary> Returns the string with the indicated suffix (if already present, it is not modified), always case-sensitive </summary>
+    function EnsureSuffix(const aSuffix: string): string                ; inline ;
+    /// <summary> Replaces all occurrences of aSearchStr with aReplaceStr in the string (case-sensitive by default) </summary>
+    function Replace( const aSearchStr, aReplaceStr: string): string                              ; overload ; inline ;
     function Replace( const aSearchStr, aReplaceStr: string; aCompareOption: TCompareOption): string ; overload ; inline ;
-
-    function RemoveChars(aRemoveChars: TSysCharSet): string  ;
-
-    function ReplaceInvalidChars(aValidStrChars: TSysCharSet; const aReplaceStr: string): string       ; overload ;
-    function ReplaceInvalidChars(const aValidStrChars, aReplaceStr: string): string                    ; overload ;
-
-    function Concat(const aSeparator, aConcatValue: string): string          ; inline;
-
+    /// <summary> Removes a set of characters from the string (much more performant than performing a replacement with a null character) </summary>
+    function RemoveChars(aRemoveChars: TSysCharSet): string            ;
+    /// <summary> Checks that the string contains only the characters indicated in aValidStrChars, otherwise for each character not found in AValidChars, it is replaced with the entire string AReplaceStr </summary>
+    function ReplaceInvalidChars(aValidStrChars: TSysCharSet; const aReplaceStr: string): string                ; overload ;
+    function ReplaceInvalidChars(const aValidStrChars, aReplaceStr: string): string                                 ; overload ;
+    /// <summary> Appends another string to the string, inserting a separator only if the starting string is not null </summary>
+    function Concat(const aSeparator, aConcatValue: string): string    ; overload ; inline;
+    /// <summary> Appends another string to the string without separators and without conditions </summary>
+    function Concat(const aConcatValue: string): string                ; overload ; inline;
+    /// <summary> Appends all strings of an array to the string without separators and without conditions </summary>
+    function Concat(const aConcatValues: TStringDynArray): string      ; overload ; inline;
+    /// <summary> Like Concat() but only if the string to be appended is not empty, otherwise returns the original string unchanged </summary>
     function ConcatIfNotEmpty(const aSeparator, aConcatValue: string): string; inline;
-
+    /// <summary> Like Concat() but only if the string to be appended is not Null, otherwise returns the original string unchanged </summary>
     function ConcatIfNotNull(const aSeparator, aConcatValue: string): string ; inline;
+    /// <summary> Like Concat() but appending two different strings depending on the value of the indicated condition </summary>
+    function ConcatIf(aIfCondition: Boolean; const aTrueConcatValue: string; const aFalseConcatValue: string=''): string ; inline;
+
+    /// <summary> Returns the string without leading zeros </summary>
     function TrimLeftZero: string ;
 
+    //-------- Methods that alter the content of a string ----------------------------
+
+    /// <summary> Returns a substring by removing it from the string (same rules as Copy) </summary>
     function Extract( AStart: Integer; aCount: Integer = -1 ): string ;
 
-    class function Duplicate(aChar: Char; aCount: Integer): string; overload ; static ; inline ;
-    class function Duplicate(const aValue: string; aCount: Integer): string; overload ; static ; inline ;
-    
-          function Split(aSeparator: Char; aQuote: Char ='"'): TStringDynArray; inline;
+    //-------- Generic methods ----------------------------
 
+    /// <summary> Returns a sequence of characters </summary>
+    class function Duplicate(aChar: Char; aCount: Integer): string; overload ; static ; inline ;
+    /// <summary> Appends the string aCount times </summary>
+    class function Duplicate(const aValue: string; aCount: Integer): string; overload ; static ; inline ;
+    /// <summary> Appends the string aCount times </summary>
+            function Duplicate(aCount: Integer): string; overload; inline;
+    /// <summary> If the string contains tokens, it splits them into an array based on the indicated separator (implements @link(TTokenString)) </summary>
+    function Split(aSeparator: Char; aQuote: Char ='"'): TStringDynArray; inline;
+    /// <summary> Given an array of strings, the content is joined into a single string composed of tokens </string>
     class function Join(aValues: TStringDynArray; aSeparator: Char; aQuote: Char ='"'): string; static;
 
-    /// <summary>
-    ///  Char content access always 1-based index, allowed negative number (starts at the end)
-    ///  Example: myVal := 'one'; // myVal.Chars[1] => 'o'   myVal.Chars[-1] => 'e'
-    /// </summary>
+    /// <summary> Access to the characters of the string ALWAYS with 1-based index </summary>
+    /// <remarks> Indicating a NEGATIVE number then the indicated position is from the end of the string </remarks>
     property Chars[AIndex: Integer]: Char read GetChars;
-    /// <summary> Get first char even if null string (returns #0) </summary>
+    /// <summary> Returns the first character of the string, if empty returns #0 without raising errors </summary>
     property FirstChar: Char read GetFirstChar;
-    /// <summary> Get last char even if null string (returns #0) </summary>
+    /// <summary> Returns the last character of the string, if empty returns #0 without raising errors </summary>
     property LastChar : Char read GetLastChar;
   end;
 
 
   /// <summary>
-  ///  Custom data type to manage a tokenized string
+  /// Implementation of a string composed of multiple values with a delimiter (token)
+  /// Default SepChar separator = ;
   /// </summary>
   TTokenString = record
   private
@@ -465,14 +583,30 @@ type
   {$ENDREGION}
     constructor Create(const aValue: string); overload ;
     constructor Create(const aValue: string; aSepChar: Char; aQuoteChar: Char = '"'); overload ;
-
+    /// <summary>
+    /// Returns the total number of tokens contained in the string. Any token separator characters (SepChar)
+    /// present within a pair of quotes (QuoteChar) are not considered as token separators.
+    ///</summary>
     function TokenCount: Integer;
+    /// <summary>
+    /// Returns the token at the position number aTokenNum (starting from zero). Any token separator characters (SepChar)
+    /// present within a pair of quotes (QuoteChar) are not considered as token separators.
+    /// <para> The QuoteChar characters of a token are not returned (the token is only the content) </para>
+    /// </summary>
     function TokenAt(aTokenNum: Integer): string ;
+    /// <summary> Returns the position of the first character in the original string relative to the indicated token </summary>
+    function TokenPos(aTokenNum: Integer): Integer ;
+    /// <summary> Fills a list with all the tokens contained in the string. The content of the list is cleared first </summary>
     procedure TokenToList(ADestList: TStrings);
+    /// <summary> Joins all the elements of the list into a single string, delimiting the elements with the SepChar separator </summary>
     function TokenFromList(ASourceList: TStrings): TTokenString ;
+    /// <summary> Enumerator to iterate over all tokens </summary>
     function GetEnumerator: TEnumerator<string>;
+    /// <summary> Returns all tokens within an array </summary>
     function ToArray: TStringDynArray;
+    /// <summary> Token separator setting </summary>
     function Sep(aSepChar: Char): TTokenString;
+    /// <summary> Quote character setting </summary>
     function Quote(aQuoteChar: Char): TTokenString;
 
     property SepChar  : Char read FSepChar   write FSepChar ;
@@ -480,6 +614,9 @@ type
   end;
 
 
+  /// <summary>
+  /// Helper for TDate for date management
+  /// </summary>
   TDateHelper = record helper for TDate
   private
   {$REGION 'Property Accessors'}
@@ -491,95 +628,97 @@ type
       function GetWeek: Word; inline ;
   {$ENDREGION}
   public
-    const NullDate: TDate = 0.0;
+    //-------- Conversion methods -------------------------------------------
 
-    //-------- conversion methods -----------------------------------
-
-
+    /// <summary> Converts the date to a string with default formatting </summary>
     function ToString: string                  ; inline ;
-
+    /// <summary> Converts the date to a string in standard ISO8601 format (without time) </summary>
     function ToStringUTC: string               ; inline ;
-
+    /// <summary> Converts the date to a string with the specified formatting </summary>
     function ToStringFormat(const aFormat: string): string                                  ; overload ; inline ;
     function ToStringFormat(const aFormat: string; aDateSeparator: Char): string            ; overload ; inline ;
     function ToStringFormat(const aFormat: string; AFormatSettings: TFormatSettings): string; overload ; inline ;
-
+    /// <summary> Converts the date to an integer in YYYYMMDD format </summary>
     function ToInt: Integer               ; inline ;
-
+    /// <summary> Decomposes the date into its individual elements (day, month, year) </summary>
     procedure Decode( out aYear, aMonth, aDay: Word )         ; inline ;
-
+    /// <summary> Encode a date from its individual elements (day, month, year) </summary>
     class function Encode( aYear, aMonth, aDay: Word ): TDate ; inline ; static ;
     class function Create( aYear, aMonth, aDay: Word ): TDate ; inline ; static ;
 
-    //-------- query methods  ---------------------------------------
+    //-------- Query methods -------------------------------------------
 
-
+    /// <summary> Indicates whether the date is null </summary>
     function IsNull: Boolean                  ; inline ;
-
+    /// <summary> Indicates whether the date is not null </summary>
     function IsNotNull: Boolean               ; inline ;
-
+    /// <summary> Indicates whether it is a leap year </summary>
     function IsInLeapYear: Boolean            ; inline ;
-
+    /// <summary> Checks if the date is within the specified range </summary>
     function IsInRange(aFromDate, aEndDate: TDate): Boolean; inline;
+    /// <summary> Indicates whether the dates are equal </summary>
     function Equals( aValue: TDate ): Boolean ; inline ;
-
+    /// <summary> If the date is null, returns the alternative date indicated as aDefault, otherwise returns the stored date </summary>
     function IfNull(aDefault: TDate): TDate   ; inline ;
-
+    /// <summary> Executes an anonymous procedure if the date is not null (the date is passed as a parameter) </summary>
     procedure IfNotEmpty(aProc: TProc<TDate>) ; inline ;
 
-
+    /// <summary> Indicates whether the date coincides with the current day </summary>
     function IsToday: Boolean; inline;
-
+    /// <summary> Indicates whether the date is different from the current day </summary>
     function IsNotToday: Boolean; inline;
 
+    /// <summary> Extracts the day from the date </summary>
     property Day  : Word read GetDay;
-
+    /// <summary> Extracts the month from the date </summary>
     property Month: Word read GetMonth;
-
+    /// <summary> Extracts the year from the date </summary>
     property Year : Word read GetYear;
-
+    /// <summary> Extracts the week of the year from the date </summary>
     property Week : Word read GetWeek;
-
+    /// <summary> Extracts the day of the week from the date (1 Monday, 7 Sunday) </summary>
     property DayOfWeek: Integer read GetDayOfWeek;
-
+    /// <summary> Extracts the day of the year from the date </summary>
     property DayOfYear: Integer read GetDayOfYear;
 
-
+    /// <summary> Returns the total number of days in the month of the indicated or stored date </summary>
           function DaysInMonth: Integer                        ; overload ;
     class function DaysInMonth( aYear, aMonth: Word ): Integer ; overload ; static ; inline ;
-
+    /// <summary> Returns the date containing the first day of the current month </summary>
     function FirstDayOfMonth: TDate               ; inline ;
-
+    /// <summary> Returns the date containing the last day of the month of the indicated date </summary>
     function LastDayOfMonth: TDate                ; inline ;
-
+    /// <summary> Returns the number of days of difference from the indicated date </summary>
     function DaysBetween(aValue: TDate)  : Integer; inline;
-
+    /// <summary> Returns the number of months of difference from the indicated date </summary>
     function MonthsBetween(aValue: TDate): Integer; inline;
-
+    /// <summary> Returns the number of years of difference from the indicated date </summary>
     function YearsBetween(aValue: TDate) : Integer; inline;
 
+    //-------- Methods that alter the content of a date ----------------------------
 
+    /// <summary> Increments the date by the indicated number of days </summary>
+    function IncDay( aDays: Integer = 1 ): TDate                     ; inline ;
+    /// <summary> Increments the date by the indicated number of months </summary>
+    function IncMonth( aMonths: Integer = 1 ): TDate                 ; inline ;
+    /// <summary> Increments the date by the indicated number of years </summary>
+    function IncYear( aYears: Integer = 1 ): TDate                   ; inline ;
 
+    //-------- Generic methods ----------------------------
 
-
-
-
-
-    function IncDay( aDays: Integer = 1 ): TDate                      ; inline ;
-
-    function IncMonth( aMonths: Integer = 1 ): TDate                  ; inline ;
-
-    function IncYear( aYears: Integer = 1 ): TDate                    ; inline ;
-
-    class function Today: TDate ; inline ; static ;
+    /// <summary> Queries on the system date </summary>
+    class function Today    : TDate ; inline ; static ;
     class function Tomorrow : TDate ; inline ; static ;
     class function Yesterday: TDate ; inline ; static ;
 
+    /// <summary> Returns the greater of the two indicated dates </summary>
     class function Max(const aDateA, aDateB: TDate): TDate; inline ; static ;
   end;
 
 
-
+  /// <summary>
+  /// Helper for TTime for time management
+  /// </summary>
   TTimeHelper = record helper for TTime
   private
   {$REGION 'Property Accessors'}
@@ -593,78 +732,90 @@ type
 
   {$ENDREGION}
   public
-    const NullTime: TTime = 0.0;
+    //-------- Conversion methods -------------------------------------------
 
-    //-------- conversion methods -----------------------------------
-
-    
+    /// <summary> Converts the time to a string with default formatting </summary>
     function ToString: string                  ; inline ;
-    
+    /// <summary> Converts the time to a string with the specified formatting </summary>
     function ToStringFormat(const aFormat: string): string                                  ; overload ; inline ;
     function ToStringFormat(const aFormat: string; aTimeSeparator: Char): string            ; overload ; inline ;
     function ToStringFormat(const aFormat: string; aFormatSettings: TFormatSettings): string; overload ; inline ;
-    
+    /// <summary> Converts the time to integer in the given format </summary>
     function ToInt(aFormat: TTimeConvFormat = HHMMSSMSS): Integer                          ; inline ;
-    
+    /// <summary> Encode a time from its individual elements hours and minutes (optional seconds and milliseconds) </summary>
     class function Create( aHour, aMin: Word; aSec: Word = 0; aMilliSec: Word = 0 ): TTime ; inline ; static ;
     class function Encode( aHour, aMin: Word; aSec: Word = 0; aMilliSec: Word = 0 ): TTime ; inline ; static ;
-
+    /// <summary> Decomposes the time into its individual elements (hours and minutes) </summary>
     procedure Decode(out aHour, aMin: Word )                     ; overload ; inline ;
-
+    /// <summary> Decomposes the time into its individual elements (hours, minutes and seconds) </summary>
     procedure Decode(out aHour, aMin, aSec: Word )               ; overload ; inline ;
-
+    /// <summary> Decomposes the time into its individual elements (hours, minutes, seconds and milliseconds) </summary>
     procedure Decode(out aHour, aMin, aSec, aMilliSec: Word )    ; overload ; inline ;
 
-    //-------- query methods -------------------------------------------
+    //-------- Query methods -------------------------------------------
 
-    
+    /// <summary> Indicates whether the time is null </summary>
     function IsNull: Boolean                     ; inline ;
+    /// <summary> Indicates whether the time is not null </summary>
     function IsNotNull: Boolean                  ; inline ;
-    
+    /// <summary> Indicates whether the times are equal </summary>
     function Equals( aValue: TTime ): Boolean    ; inline ;
-    
+    /// <summary> Indicates whether the time is afternoon </summary>
     function IsPM: Boolean; inline ;
-    
+    /// <summary> Indicates whether the time is morning </summary>
     function IsAM: Boolean; inline ;
 
-    
+    /// <summary> Extracts the hour from the time </summary>
     property Hour   : Word read GetHour;
-    
+    /// <summary> Extracts the minute from the time </summary>
     property Minute : Word read GetMinute;
-    
+    /// <summary> Extracts the second from the time </summary>
     property Second : Word read GetSecond;
-    
+    /// <summary> Extracts the millisecond from the time </summary>
     property MilliSecond : Word read GetMilliSecond;
 
-
+    /// <summary> Returns the minute of the day (minutes passed since midnight) </summary>
     property MinuteOfDay: Integer read GetMinuteOfDay;
-
+    /// <summary> The second of the day returns (seconds elapsed since midnight) </summary>
     property SecondOfDay: Integer read GetSecondOfDay;
-
+    /// <summary> The millisecond of the day returns (milliseconds elapsed since midnight) </summary>
     property MilliSecondOfDay: Integer read GetMilliSecondOfDay;
 
+    /// <summary> Returns the hours difference compared to another time </summary>
     function HoursBetween(aValue: TTime)       : Integer; inline;
+    /// <summary> Returns the minutes difference compared to another time </summary>
     function MinutesBetween(aValue: TTime)     : Integer; inline;
+    /// <summary> Returns the seconds difference compared to another time </summary>
     function SecondsBetween(aValue: TTime)     : Integer; inline;
+    /// <summary> Returns the milliseconds difference compared to another time </summary>
     function MillisecondsBetween(aValue: TTime): Integer; inline;
 
-    
+   //-------- Methods that alter the content of a time ----------------------------
+
+    /// <summary> Increments the time by the indicated number of hours </summary>
     function IncHour( AHours: Integer=1 ): TTime                    ; inline ;
-    
+    /// <summary> Increments the time by the indicated number of minutes </summary>
     function IncMinute( AMinutes: Integer=1 ): TTime                ; inline ;
-    
+    /// <summary> Increments the time by the indicated number of seconds </summary>
     function IncSecond( ASeconds: Integer=1 ): TTime                ; inline ;
-    
+    /// <summary> Increments the time by the indicated number of milliseconds </summary>
     function IncMiliSecond( AMilliSeconds: Integer=1 ): TTime       ; inline ;
 
-    //-------- utilities ----------------------------
+    //-------- Generic methods ----------------------------
 
+    /// <summary> Queries on the system time </summary>
     class function Now: TTime ; inline ; static ;
+
+    // <summary> Return the start time of the day (00:00) </summary>
     class function FistTimeOfTheDay: TTime; inline; static;
+    // <summary> Return the last time of the day  (23:59) </summary>
     class function LastTimeOfTheDay: TTime; inline; static;
   end;
 
 
+  /// <summary>
+  /// Helper for TDateTime for timestamp management
+  /// </summary>
   TDateTimeHelper = record helper for TDateTime
   private
   {$REGION 'Property Accessors'}
@@ -674,80 +825,165 @@ type
       procedure SetTime(const Value: TTime); inline;
   {$ENDREGION}
   public
-    const NullDateTime: TDateTime = 0.0;
+    //-------- Conversion methods -------------------------------------------
 
-    //-------- conversion methods -----------------------------------
-
-
+    /// <summary> Converts the date and time to a string with default formatting </summary>
     function ToString: string                      ; inline ;
-
+    /// <summary> Converts the date to a string in standard ISO8601 format with Z time </summary>
     function ToStringUTC: string                   ; inline ;
-
+    /// <summary> Converts the date to a string in standard ISO8601 format with current zone time </summary>
     function ToStringISO: string                   ; inline ;
-
+    /// <summary> Converts the date and time to a string with the specified formatting </summary>
     function ToStringFormat(const aFormat: string): string                                      ; overload ; inline ;
     function ToStringFormat(const aFormat: string; aDateSeparator: Char): string                ; overload ; inline ;
     function ToStringFormat(const aFormat: string; aDateSeparator, aTimeSeparator: Char): string; overload ; inline ;
     function ToStringFormat(const aFormat: string; AFormatSettings: TFormatSettings): string    ; overload ; inline ;
 
-    //-------- query methods -------------------------------------------
+    //-------- Query methods -------------------------------------------
 
+    /// <summary> Returns the number of days of difference from the indicated date </summary>
+    function DaysBetween(aValue: TDateTime)        : Integer; inline;
+    /// <summary> Returns the number of months of difference from the indicated date </summary>
+    function MonthsBetween(aValue: TDateTime)      : Integer; inline;
+    /// <summary> Returns the number of years of difference from the indicated date </summary>
+    function YearsBetween(aValue: TDateTime)       : Integer; inline;
+    /// <summary> Returns the hours difference compared to another date </summary>
     function HoursBetween(aValue: TDateTime)       : Integer; inline;
+    /// <summary> Returns the minutes difference compared to another time </summary>
     function MinutesBetween(aValue: TDateTime)     : Integer; inline;
+    /// <summary> Returns the seconds difference compared to another time </summary>
     function SecondsBetween(aValue: TDateTime)     : Integer; inline;
+    /// <summary> Returns the milliseconds difference compared to another time </summary>
     function MillisecondsBetween(aValue: TDateTime): Integer; inline;
 
     function IsNull: Boolean                      ; inline ;
     function IsNotNull: Boolean                   ; inline ;
 
-
+    /// <summary> Get or Set only the date part  </summary>
     property Date: TDate read GetDate write SetDate;
+    /// <summary> Get or Set only the time part  </summary>
     property Time: TTime read GetTime write SetTime;
 
-    //-------- utilities ----------------------------
+    //-------- Generic methods ----------------------------
 
-    /// <summary> Torna la data e l'ora attuale (ora di sistema) </summary>
+    /// <summary> Queries on the system date and time </summary>
     class function NowToday: TDateTime ; inline ; static ;
   end;
 
 
-  TTimeDynArray     = array of TTime;
-  TDateTimeDynArray = array of TDateTime;
-  TTDateDynArray    = array of TDate;
-
-
-  /// <summary> Helper to use dynamic string array like a TStringList </summary>
+  /// <sumary>
+  ///  Helper per gli array di stringhe
+  /// </summary>
   TStringDynArrayHelper = record helper for TStringDynArray
   public
+    /// <summary> Indica se l'array è vuoto </summary>
     function IsEmpty: Boolean; inline;
+    /// <summary> Indica se l'array contiene almeno un elemento </summary>
     function IsNotEmpty: Boolean; inline;
+    /// <summary> Indica se una stringa è contenuta nell'array </summary>
     function Contains(const aValue: string;
                       aCompareOption: TStringHelper.TCompareOption = coCaseSensitive ): Boolean ; inline;
+    // <summary> Torna l'indice della prima occorrenza della stringa indicata </summary>
     function IndexOf(const aValue: string; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive ): Integer ; overload ; inline;
+    // <summary> Torna l'indice della prima occorrenza della stringa a partire dalla posizione indicata</summary>
     function IndexOf(const aValue: string; aStartPosition: Integer; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive ): Integer ; overload ;
+    /// <summary> Torna il numero totale di elementi dell'array </summary>
     function Count: Integer; inline;
+    /// <summary> Torna il primo elemento dell'array o una stringa nulla se l'array è vuoto </summary>
     function First: string ; inline;
+    /// <summary> Torna il primo elemento dell'array rimuovendolo (se l'array è vuoto torna una stringa nulla) </summary>
     function ExtractFirst: string ; inline;
+    /// <summary> Torna l'ultimo elemento dell'array o una stringa nulla se l'array è vuoto </summary>
     function Last: string  ; inline;
+    /// <summary> Torna l'ultimo elemento dell'array rimuovendolo (se l'array è vuoto torna una stringa nulla) </summary>
     function ExtractLast: string ; inline;
+    /// <summary> Azzera il contenuto dell'array (zero elementi) </summary>
     procedure Clear ; inline;
+    /// <summary>
+    ///  Ridimensiona l'array al numero di elementi indicato.
+    ///  Se la dimensione si riduce si perdono gli ultimi elementi,
+    ///  Se la dimensione aumenta i nuovi elementi vengono inizializzati con una stringa nulla
+    /// </summary>
     procedure Resize(aCount: Integer); inline;
+    /// <summary> Accoda una stringa all'array </summary>
     procedure Add(const aValue: string); overload ; inline;
+    /// <summary> Aggiunge elementi presenti in liste dove si può anche specificare il range di elementi (per default aggiunge tutto) </summary>
     procedure Add(aValues: TStringDynArray; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ;
     procedure Add(aValues: TStrings       ; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ; inline ;
+    /// <summary> Accoda una stringa all'array solo se non è già presente</summary>
+    procedure AddIfNotExists(const aValue: string; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive); overload ;
+    /// <summary> Rimozione di un elemento dall'array con scorrimento degli elementi successivi verso l'alto (come una lista) </summary>
     procedure Delete(aIndex: Integer); inline;
+    /// <summary> Torna il valore dell'elemento indicato; se l'indice è fuori dai limiti torna una stringa nulla o il valore di default indicato </summary>
     function Get(aIndex: Integer; const aDefault: string = ''): string;
+    /// <summary> Concatena il contenuto dell'array in un unica stringa usando il separatore indicato </summary>
     function ToString(const aLineSep: string = LF): string;
   end;
 
+  /// <sumary>
+  ///  Helper for integer array
+  /// </summary>
+  TIntegerDynArrayHelper = record helper for TIntegerDynArray
+  public
+    /// <summary> Clears the content of the array (zero elements) </summary>
+    procedure Clear ; inline;
+    /// <summary> Indicates whether the array is empty </summary>
+    function IsEmpty: Boolean; inline;
+    /// <summary> Indicates whether the array contains at least one element </summary>
+    function IsNotEmpty: Boolean; inline;
+    /// <summary> Indicates whether a number is contained in the array </summary>
+    function Contains(const aValue: Integer): Boolean; inline;
+    // <summary> Returns the index of the first occurrence of the indicated number </summary>
+    function IndexOf(const aValue: Integer): Integer ; inline;
+    /// <summary> Returns the total number of elements in the array </summary>
+    function Count: Integer; inline;
+    /// <summary> Returns the first element of the array or 0 if the array is empty </summary>
+    function First: Integer ; inline;
+    /// <summary> Returns the last element of the array or 0 if the array is empty </summary>
+    function Last: Integer  ; inline;
+    /// <summary>
+    ///  Resizes the array to the indicated number of elements.
+    ///  If the size is reduced, the last elements are lost.
+    ///  If the size is increased, the new elements are initialized to 0.
+    /// </summary>
+    procedure Resize(aCount: Integer);
+    /// <summary> Adds a new value to the array </summary>
+    procedure Add(const aValue: Integer); overload ; inline;
+    /// <summary> Returns the value of the indicated element; if the index is out of bounds, returns the indicated default value </summary>
+    function Get(aIndex: Integer; aDefault: Integer = 0): Integer;
+    /// <summary> Removes an element from the array by shifting subsequent elements upwards (like a list) </summary>
+    procedure Delete(aIndex: Integer); inline;
+  end;
 
+  /// <summary>
+  ///  Helper for TMonitor
+  /// </summary>
+  TMonitorHelper = record helper for TMonitor
+  public
+     /// <summary> Executes the <i>aAction</i> procedure only after locking <i>aObject</i> </summary>
+     class procedure DoWithLock(const aObject: TObject; const aAction: TProc); static;
+     /// <summary>
+     /// Executes the <i>aAction</i> procedure only after locking <i>aObject</i>
+     /// within the specified timeout (in milliseconds), otherwise it exits returning <b>False</b>
+     /// </summary>
+     class function DoWithLockTimeout(const aObject: TObject; const aAction: TProc; const aTimeOut: Cardinal): Boolean; static;
+  end;
+
+  /// <summary>
+  ///  Helper for TObject
+  /// </summary>
   TObjectHelper = class helper for TObject
   private
-    function IsClass(aClass: TClass): Boolean; inline;
+    function IsClass(aClass: TClass): Boolean;
   public
+    /// <summary> Cast the object to the given class. If it fails, no exception is raised, but nil is returned </summary>
     function CastAs<T: class>: T;
-    function IsNull: Boolean; inline;
-    function IsNotNull: Boolean; inline;
+    /// <summary> determine whether the pointer of an object is not assigned (nil) </summary>
+    function IsNotAssigned: Boolean; inline;
+    /// <summary> determine whether the pointer of an object is assigned </summary>
+    function IsAssigned: Boolean   ; inline;
+    /// <summary> Return a class by name using RTTI (even partial, the last characters are considered significant) </summary>
+    class function FindAnyClass(const aPartialRightName: string): TClass; static;
   end;
 
 function _StrNumPadLeft(const aValue: string; aLength: Integer; aLeadingChar: Char): string;
@@ -772,9 +1008,9 @@ begin
   if (aLeadingChar = '0') then
   begin
     idx := Pos('-',Result);
-    if (idx > Low(string)) then
+    if (idx > STRING_BASE_INDEX) then
     begin
-      Result[Low(string)] := '-';
+      Result[STRING_BASE_INDEX] := '-';
       Result[idx] := '0';
     end;
   end;
@@ -821,18 +1057,18 @@ begin
      Res  := Trunc(Res);
      if AType = 1 then
      begin
-        //* Arrotondamento per Eccesso ....
+        // rounding up
         if Fraz <> 0 then Result := xSgn * ( ( Res + 1 ) / TpM )
                      else Result := xSgn * ( Res / TpM );
      end
      else  if AType = 2 then
      begin
-        //* Arrotondamento per Diffetto ....
+        // rounding down
         Result := xSgn * ( Res / TpM );
      end
      else
      begin
-        //* Arrotondamento Matematico .....
+        // Mathematical Rounding
         if Fraz < 0.5 then Result := xSgn * ( Res / TpM )
                       else Result := xSgn * ( ( Res + 1 ) / TpM );
      end;
@@ -870,6 +1106,11 @@ function TIntegerHelper.IncBy(aIncBy: Integer): Integer;
 begin
   System.Inc(Self, aIncBy) ;
   Result := Self;
+end;
+
+function TIntegerHelper.IsZero: Boolean;
+begin
+  Result := Self = 0;
 end;
 
 class function TIntegerHelper.Random(aTotValues: Integer): Integer;
@@ -910,7 +1151,7 @@ begin
                         ( Self mod 100 ),
                           resDate )
   then
-    Result := TDate.NullDate
+    Result := NullDate
   else
     Result := resDate;
 end;
@@ -920,7 +1161,7 @@ var
   resTime: TDateTime;
   hh, mm, ss, ms: word;
 begin
-  Result := TTime.NullTime;
+  Result := NullTime;
 
   if (Self > 0) then
   begin
@@ -1033,6 +1274,11 @@ begin
   Result := Self;
 end;
 
+function TInt64Helper.IsZero: Boolean;
+begin
+  Result := Self = 0;
+end;
+
 function TInt64Helper.ToString: string;
 begin
   FmtStr(Result, '%d', [Self]);
@@ -1084,6 +1330,11 @@ begin
   Result := System.Int(Self);
 end;
 
+function TFloatHelper.IsZero: Boolean;
+begin
+  Result := System.Math.IsZero(Self);
+end;
+
 function TFloatHelper.ToInt: Int64;
 begin
   Result := System.Trunc(Self);
@@ -1106,6 +1357,15 @@ begin
   fmt := TFormatSettings.Create;
   fmt.DecimalSeparator := aDecimalSeparator;
   Result := FloatToStr(Self, fmt);
+end;
+
+function TFloatHelper.ToString(aDecimalSeparator: Char; aDecimalDigits: Integer): string;
+var
+  fmt: TFormatSettings;
+begin
+  fmt := TFormatSettings.Create;
+  fmt.DecimalSeparator := aDecimalSeparator;
+  Result := FormatFloat('0.'+StringOfChar('0', aDecimalDigits), Self, fmt);
 end;
 
 function TFloatHelper.ToString(aLength: Integer; aLeadingChar: Char): string;
@@ -1157,6 +1417,11 @@ begin
   Result := TMath.RoundTo(Self,aDecimalDigits);
 end;
 
+function TCurrencyHelper.IsZero: Boolean;
+begin
+  Result := (Self = 0);
+end;
+
 function TCurrencyHelper.RoundTo(aDecimalDigits: Integer; aType: Integer): Currency ;
 begin
   Result := TMath.RoundTo(Self,aDecimalDigits,aType) ;
@@ -1179,6 +1444,15 @@ begin
   fmt := TFormatSettings.Create;
   fmt.DecimalSeparator := aDecimalSeparator;
   Result := CurrToStr(Self, fmt);
+end;
+
+function TCurrencyHelper.ToString(aDecimalSeparator: Char; aDecimalDigits: Integer): string;
+var
+  fmt: TFormatSettings;
+begin
+  fmt := TFormatSettings.Create;
+  fmt.DecimalSeparator := aDecimalSeparator;
+  Result := FormatFloat('0.'+StringOfChar('0', aDecimalDigits), Self, fmt);
 end;
 
 function TCurrencyHelper.ToString(aLength: Integer; aLeadingChar: Char): string;
@@ -1230,26 +1504,38 @@ begin
   Result := System.Length(Self);
 end;
 
+function TStringHelper.Length: Integer;
+begin
+  Result := System.Length(Self);
+end;
+
 function TStringHelper.GetChars(aIndex: Integer): Char;
+var
+  idx: Integer;
 begin
   if aIndex < 0 then
-    Result := Self[Len+aIndex+Low(string)]
+    idx := Len+aIndex+STRING_BASE_INDEX
   else
-    Result := Self[aIndex+Low(string)-1];
+    idx := aIndex+STRING_BASE_INDEX-1;
+
+  if (idx >= STRING_BASE_INDEX) and (idx <= High(Self)) then
+    Result := Self[idx]
+  else
+    Result := #0;
 end;
 
 function TStringHelper.GetFirstChar: Char;
 begin
-  if Self <> '' then
-    Result := GetChars(1)
+  if Self <> NullString then
+    Result := Self[STRING_BASE_INDEX]
   else
     Result := #0;
 end;
 
 function TStringHelper.GetLastChar: Char;
 begin
-  if Self <> '' then
-    Result := GetChars(-1)
+  if Self <> NullString then
+    Result := Self[High(Self)]
   else
     Result := #0;
 end;
@@ -1272,12 +1558,12 @@ end;
 
 function TStringHelper.IsEmpty: Boolean;
 begin
-  Result := System.SysUtils.Trim(Self) = '';
+  Result := System.SysUtils.Trim(Self) = NullString;
 end;
 
 function TStringHelper.IsNotEmpty: Boolean;
 begin
-  Result := System.SysUtils.Trim(Self) <> '';
+  Result := System.SysUtils.Trim(Self) <> NullString;
 end;
 
 function TStringHelper.IsNotNull: Boolean;
@@ -1307,6 +1593,11 @@ end;
 function TStringHelper.ToInt(aDefault: Integer): Integer;
 begin
   Result := StrToIntDef(System.SysUtils.Trim(Self), aDefault);
+end;
+
+function TStringHelper.ToInt: Integer;
+begin
+  Result := StrToIntDef(System.SysUtils.Trim(Self), 0);
 end;
 
 function TStringHelper.ToCurrency(aDefault: Currency; aDecimalSeparator: Char): Currency;
@@ -1356,13 +1647,13 @@ end;
 
 function TStringHelper.ToDateTimeISO(aDefault: TDateTime): TDateTime;
 begin
-  if not TryISO8601ToDate(Self, Result, False) then
+  if (Self = NullString) or not TryISO8601ToDate(Self, Result, False) then
     Result := aDefault;
 end;
 
 function TStringHelper.ToDateTimeUTC(aDefault: TDateTime): TDateTime;
 begin
-  if not TryISO8601ToDate(Self, Result, True) then
+  if (Self = NullString) or not TryISO8601ToDate(Self, Result, True) then
     Result := aDefault;
 end;
 
@@ -1468,7 +1759,7 @@ begin
   Result := '';
   str    := ToBase64;
   idx    := 1 ;
-  while idx < Length(str)  do
+  while idx < System.Length(Self) do
   begin
     if Result <> '' then
       Result := Result + aSeparator;
@@ -1628,7 +1919,7 @@ begin
   if Self.IsEmpty then
     Result := False
   else
-    Result := ToDate(TDate.NullDate, aDateSeparator, aDateFormat).IsNotNull;
+    Result := ToDate(NullDate, aDateSeparator, aDateFormat).IsNotNull;
 end;
 
 function TStringHelper.IsTime(aTimeSeparator: Char): Boolean;
@@ -1636,7 +1927,7 @@ begin
   if Self.IsEmpty then
     Result := False
   else
-    Result := ToTime(TTime.NullTime, aTimeSeparator).IsNotNull;
+    Result := ToTime(NullTime, aTimeSeparator).IsNotNull;
 end;
 
 function TStringHelper.PosRight(const aSubStr: string; aStartChar: Integer): Integer;
@@ -1707,8 +1998,8 @@ var
   ch: Char;
 begin
   count  := 0 ;
-  delta  := Low(string)-1;
-  SetLength(Result, Length(Self));
+  delta  := STRING_BASE_INDEX-1;
+  SetLength(Result, System.Length(Self));
   for ch in Self do
     if not CharInSet(ch, aRemoveChars) then
     begin
@@ -1840,7 +2131,7 @@ function TStringHelper.TrimLeftZero: string;
 var
   idx: integer;
 begin
-  idx  := Low(string);
+  idx  := STRING_BASE_INDEX;
   Self := System.SysUtils.TrimLeft(Self);
 
   while ((Self[idx] = '0') and (idx < High(Self))) do
@@ -1855,7 +2146,7 @@ function TStringHelper.UppercaseLetter: string;
 begin
   Result := AnsiLowerCase(Self);
   if Result <> '' then
-    Result[Low(string)] := AnsiUpperCase(Result)[Low(string)] ;
+    Result[STRING_BASE_INDEX] := AnsiUpperCase(Result)[STRING_BASE_INDEX] ;
 end;
 
 function TStringHelper.Extract(aStart, aCount: Integer): string;
@@ -1887,6 +2178,28 @@ begin
     Result := Self;
 end;
 
+function TStringHelper.Concat(const aConcatValue: string): string;
+begin
+  Result := Self + aConcatValue;
+end;
+
+function TStringHelper.Concat(const aConcatValues: TStringDynArray): string;
+var
+  s: string;
+begin
+  Result := Self;
+  for s in aConcatValues do
+    Result := Result + s;
+end;
+
+function TStringHelper.ConcatIf(aIfCondition: Boolean; const aTrueConcatValue, aFalseConcatValue: string): string;
+begin
+  if aIfCondition then
+    Result := Self + aTrueConcatValue
+  else
+    Result := Self + aFalseConcatValue;
+end;
+
 function TStringHelper.ConcatIfNotEmpty(const aSeparator, aConcatValue: string): string;
 begin
   if aConcatValue.IsNotEmpty then
@@ -1900,14 +2213,18 @@ begin
   Result := StringOfChar(aChar,aCount);
 end;
 
-class function TStringHelper.Duplicate(const aValue: string;
-  aCount: Integer): string;
+class function TStringHelper.Duplicate(const aValue: string; aCount: Integer): string;
 var
   idx: Integer;
 begin
   Result := '';
   for idx := 1 to aCount do
     Result := Result + aValue;
+end;
+
+function TStringHelper.Duplicate(aCount: Integer): string;
+begin
+  Result := string.Duplicate(Self,aCount);
 end;
 
 function TStringHelper.IsWordPresent(const aWord: string; aWordSeparators: TSysCharSet): Boolean;
@@ -1959,7 +2276,7 @@ begin
 
   Result := 0;
   count  := -1;
-  idx    := Low(string);
+  idx    := STRING_BASE_INDEX;
   len    := High(Self);
 
   while (idx <= len) and (count <> aWordNum) do
@@ -1985,7 +2302,7 @@ begin
 
   Result := '' ;
   idx := WordPos(aWordNum, aWordSeparators);
-  if idx >= Low(string) then
+  if idx >= STRING_BASE_INDEX then
     while (idx <= High(Self)) and not CharInSet(Self[idx], aWordSeparators) do
     begin
       Result := Result + Self[idx];
@@ -2071,7 +2388,7 @@ var
 begin
   Result  := ''    ;
   inQuote := False ;
-  idx     := Low(string) ;
+  idx     := STRING_BASE_INDEX ;
   j       := 0     ;
   len     := High(FValue);
 
@@ -2089,6 +2406,34 @@ begin
   end;
 end;
 
+function TTokenString.TokenPos(aTokenNum: Integer): Integer;
+var
+  j, idx, len: Integer;
+  inQuote    : Boolean;
+begin
+  Result  := STRING_BASE_INDEX-1 ;
+  inQuote := False ;
+  idx     := STRING_BASE_INDEX ;
+  j       := 0     ;
+  len     := High(FValue);
+
+  while (j <= aTokenNum) and (idx <= len) do
+  begin
+    if FValue[idx] = FQuoteChar then
+      inQuote := not inQuote
+    else
+    if not inQuote and (FValue[idx] = FSepChar) then
+      Inc(j)
+    else
+    if j = aTokenNum then
+    begin
+       Result := idx + (1 - STRING_BASE_INDEX);
+       Exit;
+    end;
+    Inc(idx);
+  end;
+end;
+
 function TTokenString.TokenCount: Integer;
 var
   len, idx: Cardinal;
@@ -2096,7 +2441,7 @@ var
 begin
   Result  := 0     ;
   inQuote := False ;
-  idx     := Low(string) ;
+  idx     := STRING_BASE_INDEX ;
   len     := High(FValue);
 
   while idx <= len do
@@ -2159,7 +2504,7 @@ begin
 
   token   := '';
   inQuote := False ;
-  idx     := Low(string) ;
+  idx     := STRING_BASE_INDEX ;
   len     := High(FValue);
 
   while (idx <= len) do
@@ -2674,6 +3019,11 @@ end;
 
 {$REGION 'TDateTimeHelper'}
 
+class function TDateTimeHelper.NowToday: TDateTime;
+begin
+  Result := System.SysUtils.Now;
+end;
+
 function TDateTimeHelper.GetDate: TDate;
 begin
   Result := DateOf(Self);
@@ -2709,9 +3059,19 @@ begin
   Result := System.DateUtils.MinutesBetween(Self, aValue);
 end;
 
-class function TDateTimeHelper.NowToday: TDateTime;
+function TDateTimeHelper.DaysBetween(aValue: TDateTime): Integer;
 begin
-  Result := System.SysUtils.Now;
+  Result := System.DateUtils.DaysBetween(Self, aValue);
+end;
+
+function TDateTimeHelper.MonthsBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.MonthsBetween(Self, aValue);
+end;
+
+function TDateTimeHelper.YearsBetween(aValue: TDateTime): Integer;
+begin
+  Result := System.DateUtils.YearsBetween(Self, aValue);
 end;
 
 function TDateTimeHelper.SecondsBetween(aValue: TDateTime): Integer;
@@ -2867,6 +3227,12 @@ begin
   Add(aValues.ToStringArray, aStartItem, aItemCount);
 end;
 
+procedure TStringDynArrayHelper.AddIfNotExists(const aValue: string; aCompareOption: TStringHelper.TCompareOption);
+begin
+  if not Contains(aValue, aCompareOption) then
+    Add(aValue);
+end;
+
 procedure TStringDynArrayHelper.Delete(aIndex: Integer);
 begin
   if (aIndex <= High(Self)) and (aIndex >= 0) then
@@ -2941,12 +3307,33 @@ end;
 
 {$ENDREGION}
 
-{$REGION 'TObjectHelper' }
+{$REGION 'TMonitorHelper'}
 
-function TObjectHelper.IsClass(aClass: TClass): Boolean;
+class procedure TMonitorHelper.DoWithLock(const aObject: TObject; const AAction: TProc);
 begin
-  Result := Assigned(Self) and (Self is aClass) ;
+  TMonitor.Enter(aObject);
+  try
+    AAction();
+  finally
+    TMonitor.Exit(aObject);
+  end;
 end;
+
+class function TMonitorHelper.DoWithLockTimeout(const aObject: TObject;
+  const AAction: TProc; const ATimeOut: Cardinal): Boolean;
+begin
+  Result := TMonitor.Enter(aObject, ATimeOut);
+  if Result then
+    try
+      AAction();
+    finally
+      TMonitor.Exit(aObject);
+    end;
+end;
+
+{$ENDREGION}
+
+{$REGION 'TObjectHelper' }
 
 function TObjectHelper.CastAs<T>: T;
 begin
@@ -2956,14 +3343,128 @@ begin
     Result := nil;
 end;
 
-function TObjectHelper.IsNotNull: Boolean;
+function TObjectHelper.IsClass(aClass: TClass): Boolean;
 begin
-  Result := Self <> nil;
+  if not Assigned(Self) or (NativeInt(Self) < $10000) then
+    Result := False
+  else
+  if Self is aClass then
+    Result := True
+  else
+    Result := False;
 end;
 
-function TObjectHelper.IsNull: Boolean;
+function TObjectHelper.IsNotAssigned: Boolean;
 begin
-  Result := Self = nil;
+  Result := not Assigned(Self);
+end;
+
+function TObjectHelper.IsAssigned: Boolean;
+begin
+  Result := Assigned(Self);
+end;
+
+class function TObjectHelper.FindAnyClass(const aPartialRightName: string): TClass;
+var
+  ctx: TRttiContext;
+  typ: TRttiType;
+  list: TArray<TRttiType>;
+begin
+  Result := nil;
+  ctx := TRttiContext.Create;
+  try
+    list := ctx.GetTypes;
+    for typ in list do
+    begin
+      if typ.IsInstance and (EndsText(aPartialRightName, typ.Name)) then
+      begin
+        Result := typ.AsInstance.MetaClassType;
+        Exit;
+      end;
+    end;
+  finally
+    ctx.Free;
+  end;
+end;
+
+
+{$ENDREGION}
+
+{$REGION 'TIntegerDynArrayHelper' }
+
+procedure TIntegerDynArrayHelper.Clear;
+begin
+  SetLength(Self,0);
+end;
+
+function TIntegerDynArrayHelper.IsEmpty: Boolean;
+begin
+  Result := (Length(Self) = 0);
+end;
+
+function TIntegerDynArrayHelper.IsNotEmpty: Boolean;
+begin
+  Result := (Length(Self) > 0);
+end;
+
+function TIntegerDynArrayHelper.Count: Integer;
+begin
+  Result := Length(Self);
+end;
+
+function TIntegerDynArrayHelper.First: Integer;
+begin
+  if Length(Self) = 0 then
+    Result := 0
+  else
+    Result := Self[0];
+end;
+
+function TIntegerDynArrayHelper.Last: Integer;
+begin
+  if Length(Self) = 0 then
+    Result := 0
+  else
+    Result := Self[High(Self)];
+end;
+
+function TIntegerDynArrayHelper.Get(aIndex, aDefault: Integer): Integer;
+begin
+  if (aIndex > -1) and (aIndex <= High(Self)) then
+    Result := Self[aIndex]
+  else
+    Result := aDefault;
+end;
+
+procedure TIntegerDynArrayHelper.Resize(aCount: Integer);
+begin
+  SetLength(Self, aCount);
+end;
+
+function TIntegerDynArrayHelper.IndexOf(const aValue: Integer): Integer;
+begin
+  for Result := 0 to High(Self) do
+     if Self[Result] = aValue then
+       Exit;
+
+  Result := -1;
+end;
+
+function TIntegerDynArrayHelper.Contains(const aValue: Integer): Boolean;
+begin
+  Result := (IndexOf(aValue) > -1);
+end;
+
+procedure TIntegerDynArrayHelper.Add(const aValue: Integer);
+begin
+  SetLength(Self, Length(Self)+1);
+  Self[High(Self)] := aValue;
+end;
+
+procedure TIntegerDynArrayHelper.Delete(aIndex: Integer);
+begin
+  if (aIndex <= High(Self)) and (aIndex >= 0) then
+    System.Delete(Self,aIndex,1);
 end;
 
 {$ENDREGION}

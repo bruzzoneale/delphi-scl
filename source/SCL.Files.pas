@@ -1,6 +1,11 @@
 {
-  @SCL.Types(standard base class and helpers for file manage)
-  @author(bruzzoneale)
+  SCL.Files
+  author(bruzzoneale@gmail.com)
+
+  Definition of specific classes for file management. 
+  These classes encapsulate the most used features and are intended to 
+  speed up file I/O management by reducing the number of lines of 
+  redundant code within the same application
 }
 
 unit SCL.Files;
@@ -469,7 +474,10 @@ begin
   if AEncoding = nil then
     AEncoding := TEncoding.Default;
 
-  Result := TFile.ReadAllText(AFileName, AEncoding);
+  if not FileExists(AFileName) then
+    Result := ''
+  else
+    Result := TFile.ReadAllText(AFileName, AEncoding);
 end;
 
 {$ENDREGION}
