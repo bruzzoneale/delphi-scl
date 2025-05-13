@@ -2,12 +2,9 @@
   SCL.Types
   author(bruzzoneale@gmail.com)
 
-  Definition of the base classes for managing native data types
-  encapsulated in dedicated classes with related conversion and
+  General purpose library for managing native data types
+  encapsulated in dedicated record helper with related conversion and
   manipulation routines.
-
-  All methods that return their own type always return a reference to themselves
-  and are typically methods that alter the stored value.
 }
 unit SCL.Types;
 
