@@ -337,7 +337,8 @@ type
   /// </remarks>
   TStringHelper = record helper for String
   private
-    function GetChars(AIndex: Integer): Char; inline;
+    function  GetChars(AIndex: Integer): Char;
+    procedure SetChars(AIndex: Integer; const Value: Char);
     function GetLastChar : Char; inline;
     function GetFirstChar: Char; inline;
   public
@@ -543,7 +544,7 @@ type
 
     /// <summary> Access to the characters of the string ALWAYS with 1-based index </summary>
     /// <remarks> Indicating a NEGATIVE number then the indicated position is from the end of the string </remarks>
-    property Chars[AIndex: Integer]: Char read GetChars;
+    property Chars[AIndex: Integer]: Char read GetChars write SetChars;
     /// <summary> Returns the first character of the string, if empty returns #0 without raising errors </summary>
     property FirstChar: Char read GetFirstChar;
     /// <summary> Returns the last character of the string, if empty returns #0 without raising errors </summary>
@@ -869,51 +870,51 @@ type
 
 
   /// <sumary>
-  ///  Helper per gli array di stringhe
+  ///  Helper for string array
   /// </summary>
   TStringDynArrayHelper = record helper for TStringDynArray
   public
-    /// <summary> Indica se l'array è vuoto </summary>
+    /// <summary> Indicates whether the array is empty </summary>
     function IsEmpty: Boolean; inline;
-    /// <summary> Indica se l'array contiene almeno un elemento </summary>
+    /// <summary> Indicates whether the array is not empty </summary>
     function IsNotEmpty: Boolean; inline;
-    /// <summary> Indica se una stringa è contenuta nell'array </summary>
+    /// <summary> Indicates whether a string is contained in the array </summary>
     function Contains(const aValue: string;
                       aCompareOption: TStringHelper.TCompareOption = coCaseSensitive ): Boolean ; inline;
-    // <summary> Torna l'indice della prima occorrenza della stringa indicata </summary>
+    // <summary> Returns the index of the first occurrence of the indicated string </summary>
     function IndexOf(const aValue: string; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive ): Integer ; overload ; inline;
-    // <summary> Torna l'indice della prima occorrenza della stringa a partire dalla posizione indicata</summary>
+    // <summary> Returns the index of the first occurrence of the indicated number from a starting index</summary>
     function IndexOf(const aValue: string; aStartPosition: Integer; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive ): Integer ; overload ;
-    /// <summary> Torna il numero totale di elementi dell'array </summary>
+    /// <summary> Returns the total number of elements in the array </summary>
     function Count: Integer; inline;
-    /// <summary> Torna il primo elemento dell'array o una stringa nulla se l'array è vuoto </summary>
+    /// <summary> Returns the first element of the array or NullString if the array is empty </summary>
     function First: string ; inline;
-    /// <summary> Torna il primo elemento dell'array rimuovendolo (se l'array è vuoto torna una stringa nulla) </summary>
+    /// <summary> Returns and remove the first element of the array </summary>
     function ExtractFirst: string ; inline;
-    /// <summary> Torna l'ultimo elemento dell'array o una stringa nulla se l'array è vuoto </summary>
+    /// <summary> Returns the last element of the array or NullString if the array is empty </summary>
     function Last: string  ; inline;
-    /// <summary> Torna l'ultimo elemento dell'array rimuovendolo (se l'array è vuoto torna una stringa nulla) </summary>
+    /// <summary> Returns and remove the last element of the array </summary>
     function ExtractLast: string ; inline;
-    /// <summary> Azzera il contenuto dell'array (zero elementi) </summary>
-    procedure Clear ; inline;
+    /// <summary> Clears the content of the array (zero elements) </summary>
+    function Clear: TStringDynArray ; inline;
     /// <summary>
-    ///  Ridimensiona l'array al numero di elementi indicato.
-    ///  Se la dimensione si riduce si perdono gli ultimi elementi,
-    ///  Se la dimensione aumenta i nuovi elementi vengono inizializzati con una stringa nulla
+    ///  Resizes the array to the indicated number of elements.
+    ///  If the size is reduced, the last elements are lost.
+    ///  If the size is increased, the new elements are initialized with NullString.
     /// </summary>
-    procedure Resize(aCount: Integer); inline;
-    /// <summary> Accoda una stringa all'array </summary>
-    procedure Add(const aValue: string); overload ; inline;
-    /// <summary> Aggiunge elementi presenti in liste dove si può anche specificare il range di elementi (per default aggiunge tutto) </summary>
-    procedure Add(aValues: TStringDynArray; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ;
-    procedure Add(aValues: TStrings       ; aStartItem: Integer = 0; aItemCount: Integer = -1); overload ; inline ;
-    /// <summary> Accoda una stringa all'array solo se non è già presente</summary>
-    procedure AddIfNotExists(const aValue: string; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive); overload ;
-    /// <summary> Rimozione di un elemento dall'array con scorrimento degli elementi successivi verso l'alto (come una lista) </summary>
-    procedure Delete(aIndex: Integer); inline;
-    /// <summary> Torna il valore dell'elemento indicato; se l'indice è fuori dai limiti torna una stringa nulla o il valore di default indicato </summary>
+    function Resize(aCount: Integer): TStringDynArray; inline;
+    /// <summary> Adds a new value to the array </summary>
+    function Add(const aValue: string): TStringDynArray; overload ; inline;
+    /// <summary> Adds new values from another array </summary>
+    function Add(aValues: TStringDynArray; aStartItem: Integer = 0; aItemCount: Integer = -1): TStringDynArray; overload ;
+    function Add(aValues: TStrings       ; aStartItem: Integer = 0; aItemCount: Integer = -1): TStringDynArray; overload ; inline ;
+    /// <summary> Adds a new value to the array only if not already exists </summary>
+    function AddIfNotExists(const aValue: string; aCompareOption: TStringHelper.TCompareOption = coCaseSensitive): TStringDynArray; overload ;
+    /// <summary> Removes an element from the array by shifting subsequent elements upwards (like a list) </summary>
+    function Delete(aIndex: Integer): TStringDynArray; inline;
+    /// <summary> Returns the value of the indicated element; if the index is out of bounds, returns the indicated default value </summary>
     function Get(aIndex: Integer; const aDefault: string = ''): string;
-    /// <summary> Concatena il contenuto dell'array in un unica stringa usando il separatore indicato </summary>
+    /// <summary> Concatenates the contents of the array into a single string using the given separator </summary>
     function ToString(const aLineSep: string = LF): string;
   end;
 
@@ -923,7 +924,7 @@ type
   TIntegerDynArrayHelper = record helper for TIntegerDynArray
   public
     /// <summary> Clears the content of the array (zero elements) </summary>
-    procedure Clear ; inline;
+    function Clear: TIntegerDynArray ; inline;
     /// <summary> Indicates whether the array is empty </summary>
     function IsEmpty: Boolean; inline;
     /// <summary> Indicates whether the array contains at least one element </summary>
@@ -943,13 +944,13 @@ type
     ///  If the size is reduced, the last elements are lost.
     ///  If the size is increased, the new elements are initialized to 0.
     /// </summary>
-    procedure Resize(aCount: Integer);
+    function Resize(aCount: Integer): TIntegerDynArray;
     /// <summary> Adds a new value to the array </summary>
-    procedure Add(const aValue: Integer); overload ; inline;
+    function Add(const aValue: Integer): TIntegerDynArray; overload ; inline;
     /// <summary> Returns the value of the indicated element; if the index is out of bounds, returns the indicated default value </summary>
     function Get(aIndex: Integer; aDefault: Integer = 0): Integer;
     /// <summary> Removes an element from the array by shifting subsequent elements upwards (like a list) </summary>
-    procedure Delete(aIndex: Integer); inline;
+    function Delete(aIndex: Integer): TIntegerDynArray; inline;
   end;
 
   /// <summary>
@@ -1519,6 +1520,18 @@ begin
     Result := Self[idx]
   else
     Result := #0;
+end;
+
+procedure TStringHelper.SetChars(AIndex: Integer; const Value: Char);
+var
+  idx: Integer;
+begin
+  if aIndex < 0 then
+    idx := Len+aIndex+STRING_BASE_INDEX
+  else
+    idx := aIndex+STRING_BASE_INDEX-1;
+
+  Self[idx] := Value;
 end;
 
 function TStringHelper.GetFirstChar: Char;
@@ -3174,14 +3187,16 @@ begin
   Result := Length(Self);
 end;
 
-procedure TStringDynArrayHelper.Clear;
+function TStringDynArrayHelper.Clear: TStringDynArray;
 begin
   SetLength(Self,0);
+  Result := Self;
 end;
 
-procedure TStringDynArrayHelper.Resize(aCount: Integer);
+function TStringDynArrayHelper.Resize(aCount: Integer): TStringDynArray;
 begin
   SetLength(Self,aCount);
+  Result := Self;
 end;
 
 function TStringDynArrayHelper.ToString(const aLineSep: string): string;
@@ -3193,16 +3208,18 @@ begin
     Result := Result.Concat(aLineSep, s);
 end;
 
-procedure TStringDynArrayHelper.Add(const aValue: string);
+function TStringDynArrayHelper.Add(const aValue: string): TStringDynArray;
 begin
   SetLength(Self,Length(Self)+1);
   Self[High(Self)] := aValue;
+  Result := Self;
 end;
 
-procedure TStringDynArrayHelper.Add(aValues: TStringDynArray; aStartItem: Integer; aItemCount: Integer);
+function TStringDynArrayHelper.Add(aValues: TStringDynArray; aStartItem: Integer; aItemCount: Integer): TStringDynArray;
 var
   idx, idxStart, idxAdd: Integer;
 begin
+  Result := Self;
   if Length(aValues) = 0 then
     Exit;
 
@@ -3219,19 +3236,21 @@ begin
   end;
 end;
 
-procedure TStringDynArrayHelper.Add(aValues: TStrings; aStartItem: Integer; aItemCount: Integer);
+function TStringDynArrayHelper.Add(aValues: TStrings; aStartItem: Integer; aItemCount: Integer): TStringDynArray;
 begin
-  Add(aValues.ToStringArray, aStartItem, aItemCount);
+  Result := Add(aValues.ToStringArray, aStartItem, aItemCount);
 end;
 
-procedure TStringDynArrayHelper.AddIfNotExists(const aValue: string; aCompareOption: TStringHelper.TCompareOption);
+function TStringDynArrayHelper.AddIfNotExists(const aValue: string; aCompareOption: TStringHelper.TCompareOption): TStringDynArray;
 begin
+  Result := Self;
   if not Contains(aValue, aCompareOption) then
     Add(aValue);
 end;
 
-procedure TStringDynArrayHelper.Delete(aIndex: Integer);
+function TStringDynArrayHelper.Delete(aIndex: Integer): TStringDynArray;
 begin
+  Result := Self;
   if (aIndex <= High(Self)) and (aIndex >= 0) then
     System.Delete(Self,aIndex,1);
 end;
@@ -3389,9 +3408,10 @@ end;
 
 {$REGION 'TIntegerDynArrayHelper' }
 
-procedure TIntegerDynArrayHelper.Clear;
+function TIntegerDynArrayHelper.Clear: TIntegerDynArray;
 begin
   SetLength(Self,0);
+  Result := Self;
 end;
 
 function TIntegerDynArrayHelper.IsEmpty: Boolean;
@@ -3433,9 +3453,10 @@ begin
     Result := aDefault;
 end;
 
-procedure TIntegerDynArrayHelper.Resize(aCount: Integer);
+function TIntegerDynArrayHelper.Resize(aCount: Integer): TIntegerDynArray;
 begin
   SetLength(Self, aCount);
+  Result := Self;
 end;
 
 function TIntegerDynArrayHelper.IndexOf(const aValue: Integer): Integer;
@@ -3452,14 +3473,16 @@ begin
   Result := (IndexOf(aValue) > -1);
 end;
 
-procedure TIntegerDynArrayHelper.Add(const aValue: Integer);
+function TIntegerDynArrayHelper.Add(const aValue: Integer): TIntegerDynArray;
 begin
   SetLength(Self, Length(Self)+1);
   Self[High(Self)] := aValue;
+  Result := Self;
 end;
 
-procedure TIntegerDynArrayHelper.Delete(aIndex: Integer);
+function TIntegerDynArrayHelper.Delete(aIndex: Integer): TIntegerDynArray;
 begin
+  Result := Self;
   if (aIndex <= High(Self)) and (aIndex >= 0) then
     System.Delete(Self,aIndex,1);
 end;
